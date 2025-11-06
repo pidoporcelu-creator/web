@@ -14,7 +14,7 @@
         "function": "apiService"
       },
       {
-        "source": "**",
+        "source": "/**",
         "destination": "/index.html"
       }
     ],
