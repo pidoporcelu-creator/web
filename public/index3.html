@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Autenticación con Firebase en 5 minutos</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+
+  <main role="application">
+   
+
+    <section class="appInfo">
+      <article class="privateInfo">
+        <h2 class="privateInfo-title">Usuario</h2>
+        
+        <div id="loginFormUI" class="form-container">
+          <p>Por favor, inicia sesión para guardar tus compras</p>
+
+          <form class="loginForm" name="loginForm">
+            <input
+              class="input"
+              type="email"
+              name="email"
+              placeholder="Correo Electronico"
+              required
+            />
+            <input
+              class="input"
+              type="password"
+              name="password"
+              placeholder="Contraseña"
+              required
+            />
+
+      
+          <div id="hiddenPrivateInfo2">
+            
+          </div>
+
+        
+        
+
+          
+      
+
+   
+
+            <div class="form-radioContainer">
+              <input type="radio" name="isLoginOrSignup" id="radioIsLogin" value="isLogin" checked />
+              <label for="radioIsLogin">Iniciar sesión</label>
+
+              <input type="radio" name="isLoginOrSignup" id="radioIsSignup" value="isSignup" />
+              <label for="radioIsSignup">Registrarte</label>
+            </div>
+
+            <button id="btnLogin" class="button">Iniciar sesión</button>
+          </form>
+        </div>
+
+        <div id="hiddenPrivateInfo">
+          <p class="loading">Cargando...</p>
+        </div>
+      </article>
+      
+  
+    </section>
+  </main>
+
+  
+  <script src="https://www.gstatic.com/firebasejs/5.6.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/5.6.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/5.6.0/firebase-firestore.js"></script>
+  <script src="index3.js"></script>
+</body>
+</html>

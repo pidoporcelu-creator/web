@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Envíos</title>
+
+    <!-- El script de Google Maps se cargará dinámicamente desde JavaScript para evitar cargarlo si no se usa -->
+    <!-- El script de Google Maps se cargará dinámicamente desde JavaScript para evitar cargarlo si no se usa -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!-- ✅ AÑADIDO: Librería de íconos Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 100px; /* Espacio para el botón flotante */
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+
+        h1 {
+            color: #1c1e21;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        /* Estilos para la tabla de envíos */
+        .envios-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .envios-table th, .envios-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .envios-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .filterable-header {
+            cursor: pointer;
+        }
+        .filter-input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .sortable-header {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .sortable-header::after {
+            content: ' \2195'; /* Flecha arriba y abajo */
+            opacity: 0.4;
+        }
+
+        .envios-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .status-select {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid transparent; /* Borde transparente para que el color de fondo lo defina */
+            width: 100%;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+            -webkit-appearance: none; /* Quita la flecha por defecto para un look más limpio */
+            -moz-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
+        /* Colores para cada estado */
+        .status-solicitado {
+            background-color: #f8d7da; /* Rojo más intenso */
+            color: #842029; /* Texto rojo oscuro */
+        }
+        .status-asignado {
+            background-color: #f5a24f; /* Naranja más claro */
+            color: #8f5a2d; /* Texto naranja oscuro */
+        }
+        .status-en-viaje {
+            background-color: #f5de13; /* Amarillo más claro */
+            color: #795548; /* Texto marrón oscuro */
+        }
+        .status-terminado {
+            background-color: #64db78; /* Verde claro */
+            color: #0f5132;
+        }
+        .status-cancelado {
+            background-color: #e9ecef; /* Celeste/Gris claro */
+            color: #6c757d;
+        }
+
+        .envio-item {
+            border: 1px solid #ccd0d5;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background-color: #f9f9f9;
+        }
+
+        .envio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0.75rem;
+        }
+
+        .envio-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #1c1e21;
+        }
+
+        .envio-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: capitalize;
+            background-color: #e7f3ff;
+            color: #1877f2;
+        }
+
+        .envio-details p {
+            margin: 0.5rem 0;
+            color: #606770;
+        }
+
+        .envio-details strong {
+            color: #1c1e21;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            color: #1877f2;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .filter-container label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        /* Estilos para el botón flotante y el modal */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background-color: #1877f2;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .fab-secondary {
+            bottom: 100px; /* Posicionado arriba del FAB principal (30px + 60px + 10px de margen) */
+            background-color: #4A5568; /* Un color gris oscuro para diferenciarlo */
+        }
+
+        .fab svg {
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none; /* Oculto por defecto */
+            align-items: flex-start; /* ✅ CORRECCIÓN: Alinea el contenido arriba para permitir el scroll completo */
+            justify-content: center;
+            overflow-y: auto; /* ✅ PERMITE EL SCROLL VERTICAL SI EL CONTENIDO ES MUY LARGO */
+            padding: 2rem 0; /* ✅ AÑADE MARGEN VERTICAL PARA QUE EL FORMULARIO NO TOQUE LOS BORDES */
+            box-sizing: border-box; /* Asegura que el padding se incluya correctamente */
+            z-index: 1001;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px; /* Aumentamos el tamaño para el mapa */
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        #map-container {
+            height: 300px;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        /* ✅ NUEVO: Estilos para el buscador de cadetes */
+        .search-results-container {
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none; /* Oculto por defecto */
+            background-color: #fff;
+            position: relative;
+            z-index: 1002; /* Para que aparezca sobre otros elementos */
+        }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background-color: #f0f2f5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mis Envíos</h1>
+        <a href="cadeteria.html" class="back-link">← Volver al Perfil</a>
+
+        <div class="filter-container">
+            <label for="hour-filter">Ver en tiempo real (últimas horas):</label>
+            <select id="hour-filter" class="status-select" style="width: auto;">
+                <option value="1" selected>Última hora</option>
+                <option value="2">Últimas 2 horas</option>
+                <option value="3">Últimas 3 horas</option>
+                <option value="5">Últimas 5 horas</option>
+                <option value="8">Últimas 8 horas</option>
+                <option value="12">Últimas 12 horas</option>
+                <option value="24">Últimas 24 horas</option>
+            </select>
+        </div>
+        <div class="filter-container" style="margin-top: 0.5rem;">
+            <label for="date-filter">O buscar en el historial por fecha:</label>
+            <input type="date" id="date-filter" class="status-select" style="width: auto;">
+        </div>
+
+        <table class="envios-table">
+            <thead>
+                <tr id="table-headers">
+                    <th class="sortable-header" data-sort="fecha">Hora</th>
+                    <th class="filterable-header" data-filter="cliente">Cliente</th>
+                    <th class="filterable-header" data-filter="origen">Origen</th>
+                    <th class="filterable-header" data-filter="destino">Destino</th>
+                    <th class="sortable-header" data-sort="vehiculo">Vehículo</th>
+                    <th class="sortable-header" data-sort="estado">Estado</th>
+                </tr>
+            </thead>
+            <tbody id="envios-tbody">
+                <!-- Las filas de envíos se cargarán aquí -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Botón Flotante para Mis Cadetes -->
+    <a href="mis-cadetes.html" id="view-cadetes-btn" class="fab fab-secondary" title="Mis Cadetes">
+        <!-- ✅ Ícono de Font Awesome -->
+        <i class="fa fa-users" aria-hidden="true"></i>
+    </a>
+
+    <!-- Botón Flotante para Añadir Envío -->
+    <div id="add-envio-btn" class="fab">+</div>
+
+    <!-- Modal para el Formulario de Nuevo Envío -->
+    <div id="envio-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Crear Nuevo Envío</h2>
+            <form id="envio-form">
+                <!-- Contenedor para el mapa (movido a la parte superior) -->
+                <div id="map-container"></div>
+
+                <div class="form-group">
+                    <label for="origen-direccion">Dirección de Origen</label>
+                    <!-- Permitimos que el usuario escriba la dirección -->
+                    <input type="text" id="origen-direccion" required placeholder="Escribe una dirección o usa el mapa...">
+                </div>
+
+                <div class="form-group">
+                    <label for="origen-referencia">Referencia Origen (Opcional)</label>
+                    <input type="text" id="origen-referencia" placeholder="Ej: Portón negro, tocar timbre">
+                </div>
+
+                <div class="form-group">
+                    <label for="destino-direccion">Dirección de Destino (Opcional)</label>
+                    <input type="text" id="destino-direccion">
+                </div>
+                <div class="form-group">
+                    <label for="destino-referencia">Referencia Destino (Opcional)</label>
+                    <input type="text" id="destino-referencia" placeholder="Ej: Dejar en recepción con Juan">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-nombre">Nombre del Cliente</label>
+                    <input type="text" id="cliente-nombre" placeholder="Opcional">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-celular">Celular del Cliente</label>
+                    <input type="tel" id="cliente-celular" placeholder="Opcional">
+                </div>
+                <div class="form-group">
+                    <label for="vehiculo-tipo">Tipo de Vehículo</label>
+                    <select id="vehiculo-tipo" required>
+                        <option value="moto" selected>Moto</option>
+                        <option value="auto">Auto</option>
+                        <option value="bici">Bici</option>
+                    </select>
+                </div>
+
+                <!-- ✅ NUEVO: Buscador de cadetes para asignación manual -->
+                <div class="form-group">
+                    <label for="cadete-search">Asignar a Cadete (Opcional)</label>
+                    <input type="text" id="cadete-search" placeholder="Escribe para buscar un cadete..." autocomplete="off">
+                    <div id="cadete-results" class="search-results-container"></div>
+                    <input type="hidden" id="selected-cadete-id">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn" class="status-select status-cancelado">Cancelar</button>
+                    <button type="submit" class="status-select status-terminado">Guardar Envío</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { iniciarFirebase } from './funciones.js';
+        import ngeohash from 'https://cdn.skypack.dev/ngeohash'; // ✅ NUEVO: Importar ngeohash
+        iniciarFirebase();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos del modal y formulario
+            const addEnvioBtn = document.getElementById('add-envio-btn');
+            const envioModal = document.getElementById('envio-modal');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const envioForm = document.getElementById('envio-form');
+            const enviosTbody = document.getElementById('envios-tbody');
+            const tableHeaders = document.getElementById('table-headers');
+            const hourFilter = document.getElementById('hour-filter');
+            const dateFilter = document.getElementById('date-filter');
+            let currentFilters = { cliente: '', origen: '', destino: '' };
+            let allEnvioss = []; // Para guardar todos los envíos y poder re-ordenarlos
+            console.log('[Init] Script inicializado.');
+            let customerNamesCache = {}; // Caché para nombres de clientes
+            let unsubscribe; // Para guardar la función que cancela la escucha de datos
+            let currentSort = { key: 'fecha', order: 'desc' }; // Orden inicial
+            const db = firebase.firestore();
+            let cadetesCache = []; // ✅ NUEVO: Caché para la búsqueda de cadetes
+
+            /**
+             * Carga dinámicamente el script de Google Maps y devuelve una promesa.
+             */
+            async function loadGoogleMaps() {
+                // Si el script ya está cargado, no hacemos nada.
+                if (window.google && window.google.maps) {
+                    return Promise.resolve();
+                }
+
+                try {
+                    // 1. Obtener la clave de la API desde Firestore
+                    const configDoc = await db.collection('datosGenerales').doc('datos').get();
+                    if (!configDoc.exists || !configDoc.data().googleMapsApiKey) {
+                        throw new Error("La clave de API de Google Maps no está configurada en Firestore (datosGenerales/datos).");
+                    }
+                    const apiKey = configDoc.data().googleMapsApiKey;
+
+                    // 2. Cargar el script con la clave obtenida
+                    const script = document.createElement('script');
+                    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+                    script.async = true;
+                    script.defer = true;
+                    document.head.appendChild(script);
+
+                    // 3. Esperar a que el script se cargue
+                    return new Promise((resolve, reject) => {
+                        script.onload = () => resolve();
+                        script.onerror = () => reject(new Error('No se pudo cargar el script de Google Maps.'));
+                    });
+                } catch (error) {
+                    console.error("Error al cargar la configuración de Google Maps:", error);
+                    alert(error.message); // Notificar al usuario del problema
+                    return Promise.reject(error);
+                }
+            }
+
+            // --- Variables para el Mapa ---
+            let map;
+            let marker;
+            let geocoder;
+            let selectedCoords = null;
+            // ✅ MEJORA: Objeto para almacenar la última dirección y sus coordenadas validadas.
+            let lastGeocodedOrigin = {
+                address: '',
+                coords: null
+            };
+            let cadeteriaDataForMap = null; // Para guardar datos de la cadetería para el mapa
+
+            function initMap(cadeteriaData) {
+                const origenInput = document.getElementById('origen-direccion');
+                geocoder = new google.maps.Geocoder();
+                // ✅ Usamos la ubicación de la cadetería o un valor por defecto si no está disponible
+                const initialLat = cadeteriaData?.lat ?? -34.6037;
+                const initialLng = cadeteriaData?.lon ?? -58.3816;
+                const defaultLocation = { lat: initialLat, lng: initialLng };
+
+                map = new google.maps.Map(document.getElementById('map-container'), {
+                    center: defaultLocation,
+                    zoom: 17, // ✅ Aumentamos el zoom para una vista más cercana
+                });
+
+                marker = new google.maps.Marker({
+                    position: defaultLocation,
+                    map: map,
+                    draggable: true,
+                    title: "Arrastra para ubicar el origen"
+                });
+
+                // Actualizar ubicación cuando se arrastra el marcador
+                marker.addListener('dragend', () => {
+                    updateLocation(marker.getPosition());
+                });
+
+                // Actualizar ubicación cuando se hace clic en el mapa
+                map.addListener('click', (e) => {
+                    marker.setPosition(e.latLng);
+                    updateLocation(e.latLng);
+                });
+
+                // ✅ NUEVO: Lógica para buscar la dirección cuando el usuario escribe
+                origenInput.addEventListener('blur', () => {
+                    const address = origenInput.value.trim();
+                    if (address) {
+                        geocodeAddress(address);
+                    }
+                });
+
+                // ✅ NUEVO: Evitar que 'Enter' envíe el formulario
+                origenInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        origenInput.blur(); // Dispara la búsqueda
+                    }
+                });
+
+                // ✅ CORRECCIÓN: Establecemos las coordenadas iniciales sin llamar a updateLocation
+                // para mantener el campo de texto vacío al inicio.
+                const initialPosition = marker.getPosition();
+                selectedCoords = { lat: initialPosition.lat(), lon: initialPosition.lng() };
+
+                function geocodeAddress(address) {
+                    // ✅ LÓGICA MEJORADA (COMO EN CADETERIAS.HTML)
+                    let searchBounds = null;
+                    let ciudadCadeteria = '';
+                    if (cadeteriaDataForMap?.lat && cadeteriaDataForMap?.lon) {
+                        const center = new google.maps.LatLng(parseFloat(cadeteriaDataForMap.lat), parseFloat(cadeteriaDataForMap.lon));
+                        const circle = new google.maps.Circle({ center: center, radius: 20000 }); // 20km
+                        searchBounds = circle.getBounds();
+                    }
+                    if (cadeteriaDataForMap?.direccion && cadeteriaDataForMap.direccion.includes(',')) {
+                        ciudadCadeteria = cadeteriaDataForMap.direccion.split(',')[1]?.trim() || '';
+                    }
+
+                    const direccionCompleta = ciudadCadeteria ? `${address}, ${ciudadCadeteria}` : address;
+                    const geocodeRequest = { 'address': direccionCompleta, 'region': 'AR', 'bounds': searchBounds };
+
+                    geocoder.geocode(geocodeRequest, (results, status) => {
+                        if (status === 'OK') {
+                            const location = results[0].geometry.location;
+                            const resultLat = location.lat();
+                            const resultLng = location.lng();
+
+                            // Opcional: Verificar distancia si es necesario
+                            // const distance = getDistanceInKm(cadeteriaDataForMap.lat, cadeteriaDataForMap.lon, resultLat, resultLng);
+                            // if (distance > 20) { alert(...); return; }
+
+                            map.setCenter(location);
+                            marker.setPosition(location);
+                            updateLocation(location); // Actualiza las coordenadas y la dirección formateada
+
+                            // ✅ MEJORA: Guardamos la dirección validada y sus coordenadas.
+                            lastGeocodedOrigin = {
+                                address: results[0].formatted_address,
+                                coords: { lat: resultLat, lon: resultLng }
+                            };
+                            // Actualizamos el input con la dirección formateada por Google para consistencia
+                            document.getElementById('origen-direccion').value = results[0].formatted_address;
+
+                        } else {
+                            alert('No se pudo encontrar la dirección. Error: ' + status);
+                        }
+                    });
+                }
+            }
+
+            // --- Lógica del Modal ---
+            addEnvioBtn.addEventListener('click', async () => {
+                envioModal.style.display = 'flex';
+                // Inicializar el mapa solo cuando se abre el modal
+                envioForm.reset(); // Limpiar el formulario cada vez que se abre
+                if (!map) {
+                    try {
+                        // Obtenemos los datos de la cadetería para pasarlos al mapa
+                        const user = firebase.auth().currentUser;
+                        const cadeteriaDoc = await db.collection('cadeterias').doc(user.uid).get();
+                        cadeteriaDataForMap = cadeteriaDoc.exists ? cadeteriaDoc.data() : null;
+
+                        await loadGoogleMaps(); // Esperamos a que cargue el script con la clave dinámica
+                        // ✅ Pasamos los datos de la cadetería a la función del mapa
+                        initMap(cadeteriaDataForMap);
+                    } catch (error) {
+                        // Si la carga falla, no continuamos y cerramos el modal.
+                        envioModal.style.display = 'none';
+                    }
+                }
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                envioModal.style.display = 'none';
+                document.getElementById('cadete-results').style.display = 'none'; // Ocultar resultados
+                document.getElementById('selected-cadete-id').value = '';
+            });
+
+            envioModal.addEventListener('click', (e) => {
+                if (e.target === envioModal) { // Cierra el modal si se hace clic fuera del contenido
+                    envioModal.style.display = 'none';
+                    document.getElementById('cadete-results').style.display = 'none';
+                    document.getElementById('selected-cadete-id').value = '';
+                }
+            });
+
+            function updateLocation(latLng) {
+                geocoder.geocode({ 'location': latLng }, (results, status) => {
+                    if (status === 'OK') {
+                        if (results[0]) {
+                            const formattedAddress = results[0].formatted_address;
+                            document.getElementById('origen-direccion').value = formattedAddress;
+                            // ✅ MEJORA: Actualizamos el estado de la dirección validada.
+                            lastGeocodedOrigin = {
+                                address: formattedAddress,
+                                coords: { lat: latLng.lat(), lon: latLng.lng() }
+                            };
+                        } else {
+                            document.getElementById('origen-direccion').value = 'Dirección no encontrada';
+                        }
+                    } else {
+                        console.error('Geocoder falló debido a: ' + status);
+                        document.getElementById('origen-direccion').value = 'Error al obtener dirección';
+                    }
+                });
+            }
+
+            // --- Lógica para guardar el nuevo envío ---
+            envioForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    alert("Debes estar logueado para crear un envío.");
+                    return;
+                }
+
+                // ✅ MEJORA: Validar que la dirección actual coincida con la geocodificada.
+                const currentInputAddress = document.getElementById('origen-direccion').value.trim();
+                if (currentInputAddress !== lastGeocodedOrigin.address) {
+                    alert("La dirección de origen ha cambiado. Por favor, confirma la nueva ubicación en el mapa antes de continuar.");
+                    // Forzamos la geocodificación de la dirección actual.
+                    document.getElementById('origen-direccion').blur();
+                    return; // Detiene la ejecución.
+                }
+
+                if (!lastGeocodedOrigin.coords) {
+                    alert("Por favor, selecciona una ubicación de origen en el mapa.");
+                    return;
+                }
+
+                const selectedCadeteId = document.getElementById('selected-cadete-id').value;
+
+                // Recolectar datos del formulario.
+                // ✅ CORRECCIÓN: Se ajusta la estructura para que coincida con la que solicitaste.
+                // 'g' y 'l' ahora están en el nivel raíz, y 'origen'/'destino' son semánticos.
+                const nuevoEnvio = {
+                    // --- Objeto de Origen Limpio y Semántico ---
+                    origen: {
+                        direccion: document.getElementById('origen-direccion').value,
+                        referencia: document.getElementById('origen-referencia').value,
+                        coordenadas: new firebase.firestore.GeoPoint(lastGeocodedOrigin.coords.lat, lastGeocodedOrigin.coords.lon)
+                    },
+                    // --- Objeto de Destino Limpio y Semántico ---
+                    destino: {
+                        direccion: document.getElementById('destino-direccion').value,
+                        referencia: document.getElementById('destino-referencia').value,
+                        // NOTA: El destino en este formulario no tiene mapa, por lo que las coordenadas se dejan en null.
+                        coordenadas: null
+                    },
+                    // --- Campos para la Librería de Geolocalización (Geohash y GeoPoint del origen) ---
+                    g: ngeohash.encode(lastGeocodedOrigin.coords.lat, lastGeocodedOrigin.coords.lon),
+                    l: new firebase.firestore.GeoPoint(lastGeocodedOrigin.coords.lat, lastGeocodedOrigin.coords.lon),
+
+                    // --- Otros campos del envío ---
+                    cliente: document.getElementById('cliente-nombre').value || 'agencia',
+                    celular: document.getElementById('cliente-celular').value || '',
+                    vehiculo: document.getElementById('vehiculo-tipo').value,
+                    idCadeteria: user.uid, // ID de la cadetería logueada
+                    cadeteId: selectedCadeteId || null, // ✅ NUEVO: ID del cadete si se seleccionó
+                    usuarioId: null, // Dejamos null si no hay un cliente registrado asociado
+                    estado: selectedCadeteId ? 'asignado' : 'solicitado', // ✅ NUEVO: Estado condicional
+                    fecha: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                try {
+                    await db.collection('envios').add(nuevoEnvio);
+                    console.log('Nuevo envío creado con éxito.');
+                    document.getElementById('cadete-results').style.display = 'none';
+                    envioModal.style.display = 'none';
+                    envioForm.reset();
+                    // La tabla se actualizará automáticamente gracias al listener onSnapshot
+                } catch (error) {
+                    console.error("Error al crear el envío:", error);
+                    alert("Hubo un error al guardar el envío. Inténtalo de nuevo.");
+                }
+            });
+
+            // ✅ NUEVO: Lógica para el buscador de cadetes
+            const cadeteSearchInput = document.getElementById('cadete-search');
+            const cadeteResultsContainer = document.getElementById('cadete-results');
+            const selectedCadeteIdInput = document.getElementById('selected-cadete-id');
+
+            cadeteSearchInput.addEventListener('input', () => {
+                const searchTerm = cadeteSearchInput.value.toLowerCase();
+                selectedCadeteIdInput.value = ''; // Limpiar selección si el usuario sigue escribiendo
+
+                if (searchTerm.length < 2) {
+                    cadeteResultsContainer.style.display = 'none';
+                    return;
+                }
+
+                const filteredCadetes = cadetesCache.filter(cadete => {
+                    const nombre = (cadete.nombre || '').toLowerCase();
+                    const vehiculo = (cadete.vehiculo || '').toLowerCase();
+                    return nombre.includes(searchTerm) || vehiculo.includes(searchTerm);
+                });
+
+                renderCadeteResults(filteredCadetes);
+            });
+
+            function renderCadeteResults(results) {
+                cadeteResultsContainer.innerHTML = '';
+                if (results.length === 0) {
+                    cadeteResultsContainer.style.display = 'none';
+                    return;
+                }
+
+                results.forEach(cadete => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.textContent = `${cadete.nombre} - ${cadete.vehiculo}`;
+                    item.dataset.id = cadete.id;
+                    item.dataset.nombre = cadete.nombre;
+                    item.addEventListener('click', () => {
+                        cadeteSearchInput.value = item.dataset.nombre;
+                        selectedCadeteIdInput.value = item.dataset.id;
+                        cadeteResultsContainer.style.display = 'none';
+                    });
+                    cadeteResultsContainer.appendChild(item);
+                });
+
+                cadeteResultsContainer.style.display = 'block';
+            }
+
+            // --- Lógica existente ---
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    const idCadeteria = user.uid;
+
+                    // Habilitar el botón de añadir solo si el usuario está logueado
+                    addEnvioBtn.style.display = 'flex';
+
+                    // ✅ NUEVO: Cargar la caché de cadetes al iniciar sesión
+                    db.collection('usuarios')
+                        .where('idCadeteria', '==', idCadeteria)
+                        // ✅ MEJORA: Filtrar para que solo se puedan asignar cadetes activos.
+                        .where('estado', '==', 'activo')
+                        .where('rol', '==', 'cadete')
+                        .get()
+                        .then(snapshot => {
+                            cadetesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log(`[Cache] ${cadetesCache.length} cadetes cargados para la búsqueda.`);
+                        }).catch(error => console.error("Error al cargar la caché de cadetes:", error));
+                    
+                    // Función para obtener y renderizar los envíos
+                    const fetchAndRenderEnvioss = (hours, specificDate) => {
+                        console.log(`[fetchAndRenderEnvioss] Buscando. Horas: ${hours}, Fecha: ${specificDate || 'N/A'}`);
+                        // Si ya hay una escucha activa, la cancelamos para evitar duplicados
+                        if (unsubscribe) {
+                            unsubscribe();
+                        }
+
+                        const useRealtime = hours !== null;
+
+                        let startDate, endDate;
+
+                        if (useRealtime) {
+                            // Lógica para tiempo real (últimas 24 horas)
+                            console.log(`[fetchAndRenderEnvioss] Modo TIEMPO REAL activado (${hours} horas).`);
+                            endDate = new Date();
+                            endDate.setFullYear(endDate.getFullYear() + 1); // Apunta a un año en el futuro
+                            startDate = new Date();
+                            startDate.setHours(startDate.getHours() - parseInt(hours, 10));
+                        } else {
+                            // Lógica para una consulta única de un día específico (pasado)
+                            if (!specificDate) return; // No hacer nada si no hay fecha
+                            console.log('[fetchAndRenderEnvioss] Modo CONSULTA ÚNICA activado (Historial).');
+                            const [year, month, day] = specificDate.split('-').map(Number);
+                            startDate = new Date(year, month - 1, day);
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(startDate);
+                            endDate.setHours(23, 59, 59, 999);
+                        }
+
+                        let query = db.collection("envios")
+                            .where("idCadeteria", "==", idCadeteria)
+                            .where("fecha", ">=", startDate)
+                            .where("fecha", "<=", endDate)
+                            .orderBy("fecha", "desc");
+
+                        const handleSnapshot = (querySnapshot) => {
+                            console.log(`Datos recibidos. ${querySnapshot.size} documentos.`);
+                            if (querySnapshot.empty) {
+                                enviosTbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No se encontraron envíos para esta fecha.</td></tr>';
+                                allEnvioss = [];
+                                return;
+                            }
+                            allEnvioss = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            applyFiltersAndSort(); // Llama a la función que filtra y ordena
+                            renderTable(allEnvioss);
+                        };
+
+                        const handleError = (error) => {
+                            console.error("Error al obtener los envíos: ", error);
+                            enviosTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar los envíos. Es posible que necesites crear un índice en Firestore. Revisa la consola para ver el enlace.</td></tr>';
+                        };
+
+                        if (useRealtime) {
+                            // Si es hoy o por defecto, escuchamos en tiempo real (onSnapshot)
+                            console.log('[fetchAndRenderEnvioss] Usando .onSnapshot().');
+                            unsubscribe = query.onSnapshot(handleSnapshot, handleError);
+                        } else {
+                            // Si se selecciona una fecha pasada, hacemos una consulta única (get)
+                            console.log('[fetchAndRenderEnvioss] Usando .get().');
+                            query.get().then(handleSnapshot).catch(handleError);
+                        }
+                    };
+
+                    // Carga inicial con el valor por defecto del filtro de horas (24)
+                    fetchAndRenderEnvioss(hourFilter.value, null);
+
+                    // Event listener para el filtro de horas
+                    hourFilter.addEventListener('change', (e) => {
+                        dateFilter.value = ''; // Limpia el filtro de fecha
+                        fetchAndRenderEnvioss(e.target.value, null);
+                    });
+
+                    // Event listener para el filtro de fecha
+                    dateFilter.addEventListener('change', (e) => {
+                        const dateValue = e.target.value;
+                        if (dateValue) {
+                            hourFilter.value = '24'; // Resetea el filtro de horas a su valor por defecto
+                            fetchAndRenderEnvioss(null, dateValue);
+                        } else {
+                            // Si se borra la fecha, vuelve al modo de tiempo real por defecto
+                            fetchAndRenderEnvioss(hourFilter.value, null);
+                        }
+                    });
+
+                } else {
+                    // Si no hay usuario, redirigir a la página de login
+                    // y ocultar el botón de añadir
+                    addEnvioBtn.style.display = 'none';
+                    window.location.href = 'usuario.html?volver=envios.html';
+                }
+            });
+
+            function renderTable(envios) {
+                console.log(`[renderTable] Iniciando renderizado de ${envios.length} filas.`);
+                enviosTbody.innerHTML = ''; // Limpiar la tabla antes de renderizar
+
+                envios.forEach(envio => {
+                    const envioId = envio.id;
+                    // Formateamos la fecha para mostrar solo la hora y los minutos
+                    const fecha = envio.fecha.toDate().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    // ✅ CORRECCIÓN: Usamos el nombre del cliente guardado en el envío.
+                    const nombreCliente = envio.cliente || (envio.usuarioId ? 'Cargando...' : 'Anónimo');
+                    // ✅ MEJORA: Truncar la dirección de origen para que sea más legible en la tabla.
+                    const origenDireccion = envio.origen.direccion || 'No especificado';
+                    const origenTruncado = origenDireccion.split(',')[0];
+
+                    const statuses = ['solicitado', 'asignado', 'en viaje', 'terminado', 'cancelado'];
+
+                    let optionsHtml = '';
+                    statuses.forEach(status => {
+                        const selected = (envio.estado === status) ? 'selected' : '';
+                        optionsHtml += `<option value="${status}" ${selected}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`;
+                    });
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${fecha}</td>
+                        <!-- Celda del cliente con un ID único para poder actualizarla -->
+                        <td id="cliente-${envioId}">${nombreCliente}</td>
+                        <td>${origenTruncado}</td>
+                        <td>${envio.destino.direccion || 'No especificado'}</td>
+                        <td>${envio.vehiculo || 'No especificado'}</td>
+                        <td>
+                            <select class="status-select status-${(envio.estado || 'solicitado').replace(' ', '-')}" data-id="${envioId}">
+                                ${optionsHtml}
+                            </select>
+                        </td>
+                    `;
+                    enviosTbody.appendChild(row);
+
+                    // Si no tenemos el nombre del cliente en caché, lo buscamos
+                    if (envio.usuarioId && !customerNamesCache[envio.usuarioId] && nombreCliente === 'Cargando...') {
+                        console.log(`[renderTable] Cache miss para usuarioId: ${envio.usuarioId}. Buscando en Firestore.`);
+                        db.collection('usuarios').doc(envio.usuarioId).get().then(clienteDoc => {
+                            const nombre = clienteDoc.exists ? (clienteDoc.data().nombre || envio.cliente) : envio.cliente;
+                            customerNamesCache[envio.usuarioId] = nombre;
+                            console.log(`[renderTable] Nombre encontrado y cacheado para ${envio.usuarioId}: "${nombre}"`);
+
+                            // ✅ CORRECCIÓN: Actualizamos solo la celda del nombre, sin re-renderizar toda la tabla.
+                            const cellToUpdate = document.getElementById(`cliente-${envioId}`);
+                            if (clienteDoc.exists) {
+                                if (cellToUpdate) {
+                                    cellToUpdate.textContent = nombre;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Event listener para la edición de estado
+            enviosTbody.addEventListener('change', (e) => {
+                if (e.target.classList.contains('status-select')) {
+                    const docId = e.target.dataset.id;
+                    const newStatus = e.target.value;
+                    const selectElement = e.target;
+                    
+                    db.collection("envios").doc(docId).update({ estado: newStatus })
+                        .then(() => {
+                            console.log(`Envío ${docId} actualizado a: ${newStatus}`);
+                            selectElement.className = 'status-select'; 
+                            selectElement.classList.add(`status-${newStatus.replace(' ', '-')}`);
+                        }).catch(error => {
+                            console.error("Error al actualizar el estado: ", error);
+                            alert("No se pudo actualizar el estado del envío.");
+                        });
+                }
+            });
+
+            // ✅ NUEVO: Lógica unificada para filtros y ordenamiento
+            tableHeaders.addEventListener('click', (e) => {
+                const sortableHeader = e.target.closest('.sortable-header');
+                const filterableHeader = e.target.closest('.filterable-header');
+
+                // Lógica de Ordenamiento
+                if (sortableHeader) {
+                    const sortKey = sortableHeader.dataset.sort;
+                    if (!sortKey) return;
+
+                    const order = (currentSort.key === sortKey && currentSort.order === 'asc') ? 'desc' : 'asc';
+                    currentSort = { key: sortKey, order };
+
+                    applyFiltersAndSort();
+                }
+
+                // Lógica para mostrar el input de filtro
+                if (filterableHeader && !filterableHeader.querySelector('input')) {
+                    const filterKey = filterableHeader.dataset.filter;
+                    const originalText = filterableHeader.textContent;
+                    filterableHeader.innerHTML = ''; // Limpiar el header
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'filter-input';
+                    input.placeholder = `Filtrar ${originalText}...`;
+                    input.value = currentFilters[filterKey];
+
+                    input.addEventListener('input', () => {
+                        currentFilters[filterKey] = input.value.toLowerCase();
+                        applyFiltersAndSort();
+                    });
+
+                    input.addEventListener('blur', () => {
+                        filterableHeader.innerHTML = originalText; // Restaurar el texto del header
+                    });
+
+                    filterableHeader.appendChild(input);
+                    input.focus();
+                }
+            });
+
+            function applyFiltersAndSort() {
+                let dataToProcess = [...allEnvioss];
+
+                // Aplicar filtros
+                if (currentFilters.cliente) {
+                    dataToProcess = dataToProcess.filter(envio => (customerNamesCache[envio.usuarioId] || '').toLowerCase().includes(currentFilters.cliente));
+                }
+                if (currentFilters.origen) {
+                    dataToProcess = dataToProcess.filter(envio => (envio.origen.direccion || '').toLowerCase().includes(currentFilters.origen));
+                }
+                if (currentFilters.destino) {
+                    dataToProcess = dataToProcess.filter(envio => (envio.destino.direccion || '').toLowerCase().includes(currentFilters.destino));
+                }
+
+                // Ordenar los datos ya filtrados
+                sortAndRender(dataToProcess); // Usamos la función que ordena y re-renderiza
+            }
+
+            // ✅ NUEVA FUNCIÓN: Centraliza la lógica de ordenamiento.
+            function sortData() {
+                if (!allEnvioss || allEnvioss.length === 0) return;
+
+                const { key, order } = currentSort;
+
+                allEnvioss.sort((a, b) => {
+                    let valA, valB;
+                    if (key === 'estado') {
+                        const priority = { 'solicitado': 1, 'asignado': 2, 'en viaje': 3, 'terminado': 4, 'cancelado': 5 };
+                        valA = priority[a.estado] || 99;
+                        valB = priority[b.estado] || 99;
+                    } else if (key === 'fecha') {
+                        valA = a.fecha.toMillis();
+                        valB = b.fecha.toMillis();
+                    } else {
+                        valA = a[key];
+                        valB = b[key];
+                    }
+                    if (valA < valB) return order === 'asc' ? -1 : 1;
+                    if (valA > valB) return order === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            function sortAndRender(data) {
+                sortData(data); // Llama a la función de ordenamiento (que modifica allEnvioss)
+                renderTable(data); // Renderiza la tabla con los datos ya ordenados
+            }
+        });
+    </script>
+
+</body>
+</html>

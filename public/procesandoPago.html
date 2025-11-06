@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesando compra...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        /* Animación para el spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border-left-color: #4f46e5; /* Indigo-600 */
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen flex items-center justify-center">
+    
+    <div class="w-full max-w-md bg-white p-6 sm:p-10 rounded-xl shadow-2xl border border-gray-100 text-center">
+        
+        <!-- Spinner de carga -->
+        <div class="spinner mx-auto mb-6"></div>
+        
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Procesando tu compra</h1>
+        <p class="text-gray-500">Por favor, espera un momento. Te estamos redirigiendo a Mercado Pago para completar tu compra de forma segura.</p>
+
+        <!-- Área de Mensajes de Error -->
+        <div id="messageArea" class="mt-6 p-4 rounded-lg hidden" role="alert"></div>
+
+        <!-- Botón para reintentar en caso de error -->
+        <button id="retryButton" class="hidden mt-4 w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Reintentar Pago
+        </button>
+    </div>
+
+    <!-- ✅ MEJOR PRÁCTICA: Importar la configuración de Firebase para construir URLs dinámicas -->
+    <script type="module">
+        import { iniciarFirebase, firebaseConfig } from './funciones.js';
+    </script>
+    <script>
+        // ==========================================
+        // 🔑 Funciones de Carrito
+        // ==========================================
+        
+        let appCarrito = null; // Variable para almacenar el carrito recuperado
+
+        // Intenta recuperar el carrito de localStorage usando el UID del comercio de la URL
+        function getCarritoFromLocalStorage(commerceKey) {
+            if (!commerceKey) {
+                console.error("No se proporcionó UID de comercio en la URL.");
+                return null;
+            }
+            try {
+                const data = JSON.parse(localStorage.getItem(commerceKey));
+                // Buscamos un objeto que parezca un carrito (debe tener 'productos' y 'total')
+                if (data && data.productos && typeof data.total === 'number') {
+                    console.log("Carrito recuperado con éxito bajo la key:", commerceKey);
+                    return data;
+                }
+            } catch (e) {
+                console.error("Error al parsear el carrito desde localStorage:", e);
+            }
+            console.error("No se encontró un carrito válido en localStorage para la key:", commerceKey);
+            return null;
+        }
+
+        // Función para mapear el carrito al formato de items de Mercado Pago
+        function mapCartToMpItems(carrito) {
+            if (!carrito || !carrito.productos) return [];
+
+            const mpItems = Object.values(carrito.productos)
+                .map(prod => {
+                    // Mercado Pago requiere: title, quantity, unit_price, currency_id
+                    return {
+                        title: prod.title || "Producto sin nombre",
+                        quantity: prod.cantidad,
+                        unit_price: prod.precio, // Usamos el precio unitario del producto
+                        currency_id: "ARS", // Ajusta si usas otra moneda
+                        id: prod.id // Útil para seguimiento
+                    };
+                })
+                .filter(item => item.quantity > 0 && item.unit_price > 0); // Solo items válidos
+                
+            return mpItems;
+        }       
+
+        // ==========================================
+        // Lógica principal y utilidades
+        // ==========================================
+
+        const messageArea = document.getElementById('messageArea');
+        const retryButton = document.getElementById('retryButton');
+
+        // Función auxiliar para mostrar mensajes
+        function displayMessage(message, type = 'info') {
+            messageArea.textContent = message;
+            messageArea.className = 'mt-6 p-4 rounded-lg';
+            messageArea.classList.remove('hidden');
+
+            if (type === 'error') {
+                messageArea.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
+                retryButton.classList.remove('hidden');
+            } else {
+                messageArea.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-200');
+                retryButton.classList.add('hidden');
+            }
+        }
+
+        // Función principal que se ejecuta al cargar la página
+        async function processPayment() {
+            // CRÍTICO: Verificar que el carrito esté cargado y no vacío
+            if (!appCarrito || !appCarrito.productos || Object.keys(appCarrito.productos).length === 0) {
+                displayMessage('Error: El carrito está vacío o no se pudo cargar. Vuelve al catálogo e intenta de nuevo.', 'error');
+                return;
+            }
+
+            // --- CONFIGURACIÓN (Hardcodeada para ejecución automática) ---
+            // const apiBaseUrl = "https://southamerica-east1-tienda1-81220.cloudfunctions.net/mercadopagoService"; // URL de producción
+            
+            // ✅ MEJOR PRÁCTICA: Construir la URL del emulador dinámicamente.
+            // Esto usa el projectId de tu configuración actual en funciones.js.
+            const projectId = window.firebaseConfig.projectId;
+            const apiBaseUrl = `http://127.0.0.1:5001/${projectId}/southamerica-east1/mercadopagoService`;
+            console.warn("🔴 ¡MODO DESARROLLO! La API está apuntando al emulador local. No olvides cambiar esto antes de desplegar a producción.");
+
+            const endpoint = '/create_preference';
+            const apiUrlWithEndpoint = `${apiBaseUrl}${endpoint}`;
+
+            // ✅ PRÁCTICA CORRECTA: Obtener el ID del vendedor dinámicamente desde el carrito.
+            // Lo obtenemos del objeto del carrito, que a su vez lo obtiene del comercio.
+            const mpUserId = appCarrito.comercio.mp_user_id;
+            if (!mpUserId) {
+                displayMessage('Error crítico: No se pudo determinar el ID del vendedor de Mercado Pago. La configuración del comercio podría estar incompleta.', 'error');
+                return;
+            }
+
+            const backUrls = {
+                success: 'https://pidoporcelu.com/pago_exitoso', 
+                pending: 'https://pidoporcelu.com/pago_pendiente',
+                failure: 'https://pidoporcelu.com/pago_fallido'
+            };
+
+            // Usar la función de mapeo para construir el array de items de Mercado Pago
+            const itemsForMP = mapCartToMpItems(appCarrito);
+            
+            if (itemsForMP.length === 0) {
+                displayMessage('Error: No hay productos válidos en el carrito para procesar el pago.', 'error');
+                return;
+            }
+
+            // Construir el cuerpo de la solicitud (usando los items reales del carrito)
+            const requestBody = {
+                mp_user_id: mpUserId,
+                items: itemsForMP, 
+                back_urls: backUrls,
+                external_reference: appCarrito.pedidoId, // <-- ¡AQUÍ USAMOS EL ID DEL PEDIDO!
+                shipping_cost: appCarrito.costoEnvio || 0 // ✅ AÑADIMOS EL COSTO DE ENVÍO
+            };
+            
+            console.log("Payload enviado a Cloud Function:", requestBody);
+
+            try {
+                const response = await fetch(apiUrlWithEndpoint, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                // Manejo de respuesta
+                const responseText = await response.text(); 
+                let data;
+                
+                try {
+                    data = JSON.parse(responseText);
+                } catch(e) {
+                    throw new Error(`Error del servidor: La respuesta no es un JSON válido. Respuesta: ${responseText.substring(0, 150)}...`);
+                }
+
+                if (!response.ok) {
+                    const errorDetails = data.error || data.details || data.message || `Error ${response.status}: Revisa los logs de la Cloud Function`;
+                    throw new Error(`Error del servidor: ${errorDetails}`);
+                }
+                
+                const redirectUrl = data.sandbox_init_point || data.init_point;
+                
+                if (redirectUrl) {
+                    // ✅ CORRECCIÓN: Guardar el ID del comercio en sessionStorage
+                    // para que la página de éxito sepa qué carrito limpiar.
+                    const params = new URLSearchParams(window.location.search);
+                    sessionStorage.setItem('lastCommerceKey', params.get('comercio'));
+                    window.location.href = redirectUrl;
+                } else {
+                    throw new Error('Respuesta exitosa, pero no se encontró la URL de redirección ("sandbox_init_point" o "init_point").');
+                }
+
+            } catch (error) {
+                const errorMsg = error.message || 'Error de conexión con el servidor.';
+                displayMessage(`Fallo al crear la preferencia de pago. Error: ${errorMsg}`, 'error');
+                console.error("URL de Llamada:", apiUrlWithEndpoint);
+                    }
+        }
+
+
+        // ==========================================
+        // Inicialización
+        // ==========================================
+
+        window.onload = () => {
+            // Extraer el UID del comercio desde la URL
+            const params = new URLSearchParams(window.location.search); 
+            const commerceKey = params.get('comercio'); // UID del comercio
+            const pedidoId = params.get('pedidoId'); // <-- OBTENEMOS EL ID DEL PEDIDO
+
+            if (!commerceKey || !pedidoId) {
+                displayMessage('Error: Faltan parámetros esenciales (comercio o pedidoId) en la URL. Por favor, intenta de nuevo desde el carrito.', 'error');
+                return;
+            }
+            
+            // Cargar el carrito al inicio de la página
+            const carritoData = getCarritoFromLocalStorage(commerceKey);
+            
+            if (carritoData) {
+                appCarrito = carritoData;
+                appCarrito.pedidoId = pedidoId; // Adjuntamos el ID del pedido al objeto del carrito
+                processPayment(); // Iniciar el proceso de pago automáticamente
+            } else {
+                displayMessage(`No se pudo encontrar el carrito para el comercio "${commerceKey}". Por favor, vuelve al catálogo y agrega productos.`, 'error');
+            }
+        };
+
+        retryButton.addEventListener('click', () => window.location.reload());
+    </script>
+</body>
+</html>

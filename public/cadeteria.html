@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadetería</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <!-- Google Maps JavaScript API se cargará dinámicamente -->
+
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Contenedor del formulario */
+        .form-container {
+            background-color: #ffffff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #1c1e21;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        /* Grupo de campos del formulario */
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #606770;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #ccd0d5;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #1877f2;
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+
+        /* Botón de envío y búsqueda */
+        .submit-btn {
+            width: 100%;
+            padding: 0.9rem;
+            background-color: #1877f2;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .submit-btn:hover {
+            background-color: #166fe5;
+        }
+
+        /* Grupo de botones */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .view-trips-btn {
+            background-color: #4CAF50; /* Verde */
+            text-decoration: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .view-trips-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* Estilos para el mapa */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 300px; /* Ajuste de altura */
+            margin-top: 0.5rem; /* Margen superior para separar del label */
+            border: 1px solid #ccd0d5;
+        }
+        /* ✅ NUEVO: Estilos para el interruptor deslizable (toggle switch) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #25D366; /* Color de WhatsApp */
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        /* ✅ NUEVO: Estilos para el mensaje de restricción de rol */
+        #role-restriction-message {
+            background-color: #fffbe6; /* Amarillo claro */
+            color: #92400e; /* Ámbar oscuro */
+            border: 1px solid #fde68a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h1>Cadetería</h1>
+        <form id="cadete-form" action="/api/registrar-cadete" method="POST">
+            
+            <!-- ✅ NUEVO: Mensaje de restricción (oculto por defecto) -->
+            <div id="role-restriction-message" style="display: none;">
+                Esta página es exclusiva para la configuración de perfiles de cadeterías.
+            </div>
+            <!-- Vista previa del logo (movida aquí) -->
+            <img id="logo-preview" src="#" alt="Vista previa del logo" style="max-width: 120px; max-height: 120px; margin: 0 auto 1.5rem auto; border-radius: 50%; object-fit: cover; display: none; border: 2px solid #ccd0d5;">
+
+            <!-- Elemento para mostrar el UID -->
+            <p id="cadete-uid" class="text-xs text-gray-500 mb-4"></p>
+
+
+            <!-- ✅ NUEVO: Contenedor para el contenido del formulario, oculto por defecto -->
+            <div id="form-content" style="display: none;">
+                <div class="form-group">
+                    <label for="nombre">Nombre y Apellido</label>
+                    <input type="text" id="nombre" name="nombre" class="input-field" placeholder="Ej: Juan Pérez" required>
+                    <label for="negocio">Nombre del Negocio</label>
+                    <input type="text" id="negocio" name="negocio" class="input-field" placeholder="Ej: Cadetería La Veloz" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="nickUrl">URL Nickname (único, sin espacios)</label>
+                    <input type="text" id="nickUrl" name="nickUrl" class="input-field" placeholder="ej: la-veloz" pattern="[a-z0-9\-]+" title="Solo letras minúsculas, números y guiones.">
+                    <p id="nickUrl-feedback" class="text-xs mt-1"></p>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="logo">Logo (URL)</label>
+                    <input type="url" id="logo" name="logo" class="input-field" placeholder="Ej: https://ejemplo.com/logo.png">
+                </div>
+
+                <div class="form-group">
+                    <label for="direccion">Dirección</label>
+                    <input type="text" id="direccion" name="direccion" class="input-field" placeholder="Ej: Urquiza 545, Gualeguaychú" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Ajusta la ubicación en el mapa</label>
+                    <div id="map" class="map-container"></div>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="telefono">Número de Teléfono</label>
+                    <input 
+                        type="tel" 
+                        id="telefono" 
+                        name="telefono" 
+                        class="input-field" 
+                        placeholder="10 dígitos, sin 0 ni 15. Ej: 3446123456" 
+                        required 
+                        pattern="\d{10}" 
+                        title="El número debe tener 10 dígitos, sin el 0 inicial ni el 15."
+                        maxlength="10">
+                </div>
+
+                <!-- ✅ NUEVO: Interruptor para habilitar WhatsApp -->
+                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                    <label for="whatsapp-toggle" style="margin-bottom: 0;">Habilitar chat por WhatsApp</label>
+                    <label class="switch">
+                        <input type="checkbox" id="whatsapp-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="tarifaxkm">Tarifa por Km ($)</label>
+                    <input type="number" id="tarifaxkm" name="tarifaxkm" class="input-field" placeholder="Ej: 150" required min="0" step="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="tarifaminima">Tarifa Mínima ($)</label>
+                    <input type="number" id="tarifaminima" name="tarifaminima" class="input-field" placeholder="Ej: 500" required min="0" step="1">
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="submit-btn">Guardar</button>
+                    <a href="mis-cadetes.html" class="submit-btn view-trips-btn">Ver mis cadetes</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script type="module">
+        // Importamos la función para inicializar Firebase desde el archivo central de funciones
+        import { Cadeteria } from './objetos.js';
+        import { iniciarFirebase } from './funciones.js';
+        import ngeohash from 'https://cdn.skypack.dev/ngeohash'; // ✅ NUEVO: Importar ngeohash
+
+        // Inicializamos Firebase
+        iniciarFirebase();
+
+        /**
+         * ✅ NUEVO: Carga dinámicamente el script de Google Maps de forma segura.
+         */
+        async function loadGoogleMaps() {
+            if (window.google && window.google.maps) {
+                return Promise.resolve();
+            }
+
+            try {
+                const db = firebase.firestore();
+                const configDoc = await db.collection('datosGenerales').doc('datos').get();
+                if (!configDoc.exists || !configDoc.data().googleMapsApiKey) {
+                    throw new Error("La clave de API de Google Maps no está configurada en Firestore.");
+                }
+                const apiKey = configDoc.data().googleMapsApiKey;
+
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+
+                return new Promise((resolve, reject) => {
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error('No se pudo cargar el script de Google Maps.'));
+                });
+            } catch (error) {
+                console.error("Error al cargar la configuración de Google Maps:", error);
+                alert(error.message);
+                return Promise.reject(error);
+            }
+        }
+
+        // --- Variables globales del script ---
+        let map, marker; // Variables para el mapa y el marcador
+        let cadete = new Cadeteria(); // Instancia global para los datos
+
+        // --- Lógica Principal ---
+        firebase.auth().onAuthStateChanged(user => {
+            // Mover la declaración de variables aquí para que estén en el alcance correcto
+            const telefonoInput = document.getElementById('telefono');
+            const nombreInput = document.getElementById('nombre');
+            const negocioInput = document.getElementById('negocio');
+            const logoInput = document.getElementById('logo');
+            const logoPreview = document.getElementById('logo-preview');
+            const cadeteUidP = document.getElementById('cadete-uid'); // ✅ NUEVO: Referencia al párrafo del UID
+            const whatsappToggle = document.getElementById('whatsapp-toggle'); // ✅ NUEVO: Referencia al interruptor
+            const direccionInput = document.getElementById('direccion');
+            const db = firebase.firestore();
+            const formContent = document.getElementById('form-content');
+            const restrictionMessage = document.getElementById('role-restriction-message');
+
+            if (user) {
+                // ✅ NUEVO: Primero, verificar el rol del usuario
+                db.collection('usuarios').doc(user.uid).get().then(userDoc => {
+                    const userRole = userDoc.exists ? userDoc.data().rol : null;
+
+                    if (userRole === 'cadeteria') {
+                        // El usuario tiene el rol correcto, mostrar el formulario y continuar
+                        formContent.style.display = 'block';
+                        restrictionMessage.style.display = 'none';
+
+                        // Buscar si ya existe un perfil de cadetería para este usuario
+                        const cadeteRef = db.collection("cadeterias").doc(user.uid);
+                        cadeteUidP.textContent = `ID de Cadeteria: ${user.uid}`;
+
+                        cadeteRef.get().then((doc) => {
+                            if (doc.exists) { // Perfil existente
+                                console.log("Perfil de cadetería encontrado. Cargando datos...", doc.data());
+                                const cadeteData = doc.data();
+                                Object.assign(cadete, cadeteData); // Poblar la instancia global
+
+                                // Rellenamos el formulario con los datos existentes
+                                nombreInput.value = cadete.nombre || '';
+                                negocioInput.value = cadete.negocio || '';
+                                document.getElementById('nickUrl').value = cadete.nickUrl || '';
+                                document.getElementById('telefono').value = cadete.telefono || '';
+                         
+                                const lat = cadete.lat || -33.0094;
+                                const lon = cadete.lon || -58.5238;
+                                // ✅ MEJORA: Inicializar el mapa solo después de que la API esté lista.
+                                loadGoogleMaps().then(() => {
+                                    initMap(lat, lon);
+                                }).catch(e => console.error("Fallo al inicializar el mapa para perfil existente:", e));
+
+                                logoInput.value = cadete.imagen || '';
+                                direccionInput.value = cadete.direccion || '';
+                                document.getElementById('tarifaxkm').value = cadete.tarifaxkm || '';
+                                document.getElementById('tarifaminima').value = cadete.tarifaminima || '';
+                                whatsappToggle.checked = cadete.permiteWhatsapp === true;
+
+                                if (cadete.imagen) {
+                                    logoPreview.src = cadete.imagen;
+                                    logoPreview.style.display = 'block';
+                                }
+                            } else { // Perfil nuevo
+                                console.log("Usuario logueado pero sin perfil de cadetería. Puede crear uno nuevo.");
+                                // ✅ MEJORA: Inicializar el mapa solo después de que la API esté lista.
+                                loadGoogleMaps().then(() => {
+                                    initMap(); // Inicializa el mapa con la ubicación por defecto
+                                }).catch(e => console.error("Fallo al inicializar el mapa para perfil nuevo:", e));
+                            }
+                        }).catch((error) => {
+                            console.error("Error al buscar el perfil de la cadetería:", error);
+                        });
+
+                    } else {
+                        // El usuario NO tiene el rol correcto, mostrar mensaje y ocultar formulario
+                        console.warn(`Acceso denegado. El usuario ${user.uid} tiene el rol '${userRole}' y no 'cadeteria'.`);
+                        formContent.style.display = 'none';
+                        restrictionMessage.style.display = 'block';
+                        // Opcional: Ocultar también el UID si no es relevante para el usuario
+                        cadeteUidP.style.display = 'none';
+                    }
+                }).catch(error => {
+                    console.error("Error al verificar el rol del usuario:", error);
+                    formContent.style.display = 'none';
+                    restrictionMessage.textContent = 'Error al verificar permisos. Intenta recargar la página.';
+                    restrictionMessage.style.display = 'block';
+                });
+            } else {
+                // --- Usuario NO está logueado ---
+                console.log('Usuario no autenticado. Redirigiendo a la página de login...');
+                // Redirigimos a la página de usuario para que inicie sesión, con un parámetro para volver
+                window.location.href = 'usuario.html?volver=cadeteria.html';
+            }
+
+            // ✅ NUEVO: Lógica para validar el nickUrl en tiempo real
+            const nickUrlInput = document.getElementById('nickUrl');
+            if (nickUrlInput) {
+                let debounceTimer;
+                nickUrlInput.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    const feedbackEl = document.getElementById('nickUrl-feedback');
+                    const nick = nickUrlInput.value.trim().toLowerCase();
+
+                    // Limpiar y validar formato mientras escribe
+                    nickUrlInput.value = nick.replace(/[^a-z0-9-]/g, '');
+                    if (feedbackEl) {
+                        feedbackEl.textContent = '';
+                        feedbackEl.style.color = '';
+                    }
+
+                    if (nick.length < 3) return;
+
+                    debounceTimer = setTimeout(async () => {
+                        if (!feedbackEl) return;
+                        feedbackEl.textContent = 'Verificando...';
+                        feedbackEl.style.color = '#606770';
+
+                        const user = firebase.auth().currentUser;
+                        if (!user) return;
+
+                        const querySnapshot = await db.collection('cadeterias').where('nickUrl', '==', nick).limit(1).get();
+                        const isTakenByOther = !querySnapshot.empty && querySnapshot.docs[0].id !== user.uid;
+
+                        feedbackEl.textContent = isTakenByOther ? 'Este nickname ya está en uso.' : '¡Nickname disponible!';
+                        feedbackEl.style.color = isTakenByOther ? 'red' : 'green';
+                    }, 500); // Espera 500ms después de que el usuario deja de escribir
+                });
+            }
+
+            // --- Lógica para la vista previa del logo ---
+            logoInput.addEventListener('input', () => {
+                const url = logoInput.value.trim();
+                if (url) {
+                    logoPreview.src = url;
+                    logoPreview.style.display = 'block';
+                } else {
+                    logoPreview.style.display = 'none';
+                }
+            });
+
+            // Manejar errores si la URL de la imagen no es válida
+            logoPreview.onerror = function() {
+                // Si la imagen no se puede cargar, la ocultamos para no mostrar un ícono de imagen rota.
+                this.style.display = 'none';
+            };
+
+            // --- Lógica del Mapa Interactivo ---
+            function initMap(lat = -33.0094, lng = -58.5238) { // Coordenadas de Gualeguaychú por defecto
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat, lng },
+                    zoom: 15,
+                });
+
+                marker = new google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                    draggable: true
+                });
+
+                // Guardar coordenadas iniciales
+                updateCoordinates(marker.getPosition());
+
+                map.addListener('click', (e) => {
+                    marker.setPosition(e.latLng);
+                    updateCoordinates(e.latLng);
+                });
+
+                marker.addListener('dragend', (e) => {
+                    updateCoordinates(e.latLng);
+                });
+            }
+
+            function updateCoordinates(latLng) {
+                cadete.lat = latLng.lat();
+                cadete.lon = latLng.lng();
+                console.log(`Coordenadas actualizadas: Lat ${cadete.lat}, Lon ${cadete.lon}`);
+            }
+
+            // Actualiza el mapa cuando el usuario deja de escribir en el campo de dirección
+            direccionInput.addEventListener('blur', () => {
+                const address = direccionInput.value.trim();
+                if (!address) {
+                    return;
+                }
+
+                // ✅ MEJORA: Validar que el usuario incluya la ciudad.
+                // Si la dirección no contiene una coma, es probable que falte la ciudad.
+                if (!address.includes(',')) {
+                    alert('Por favor, ingresa una dirección más completa que incluya la ciudad (ej: "Urquiza 545, Gualeguaychú").');
+                    return;
+                }
+                
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ 'address': address, 'region': 'AR' }, (results, status) => {
+                    if (status === 'OK') {
+                        const location = results[0].geometry.location;
+                        map.setCenter(location);
+                        marker.setPosition(location);
+                        updateCoordinates(location);
+                    } else {
+                        alert('No se pudo encontrar la ubicación. Por favor, verifica que la dirección y la ciudad sean correctas.');
+                        console.warn(`Error de geocodificación para la dirección "${address}". Estado: ${status}`);
+                    }
+                });
+            });
+        });
+
+        const cadeteForm = document.getElementById('cadete-form');
+
+        // --- Lógica para guardar el formulario ---
+        cadeteForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Evitamos que el formulario se envíe de la forma tradicional
+
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Error: No hay un usuario autenticado. Por favor, recarga la página.");
+                return;
+            }
+
+            // Poblamos el objeto 'cadeteria' con los datos del formulario
+            cadete.uid = user.uid;
+            cadete.idCadeteria = user.uid; // La cadetería se gestiona a sí misma
+            cadete.nombre = document.getElementById('nombre').value;
+            cadete.negocio = document.getElementById('negocio').value;
+            cadete.nickUrl = document.getElementById('nickUrl').value.trim().toLowerCase();
+            cadete.imagen = document.getElementById('logo').value; // Guardamos la URL del logo
+            cadete.direccion = document.getElementById('direccion').value;
+            cadete.telefono = document.getElementById('telefono').value;
+            cadete.tarifaxkm = parseFloat(document.getElementById('tarifaxkm').value) || 0;
+            cadete.tarifaminima = parseFloat(document.getElementById('tarifaminima').value) || 0;
+            cadete.permiteWhatsapp = document.getElementById('whatsapp-toggle').checked; // ✅ NUEVO: Guardar estado del interruptor
+            cadete.activo = true;
+            cadete.rol = 'cadete'; // Asignamos el rol explícitamente
+
+            // Creamos un objeto plano para guardar en Firestore, excluyendo métodos
+            const dataToSave = {
+                ...cadete, // Copiamos todas las propiedades del objeto cadete
+                // Aseguramos que los campos principales estén presentes
+                nombre: cadete.nombre,
+                negocio: cadete.negocio,
+                nickUrl: cadete.nickUrl,
+                telefono: cadete.telefono,
+                imagen: cadete.imagen,
+                direccion: cadete.direccion,
+                tarifaxkm: cadete.tarifaxkm,
+                tarifaminima: cadete.tarifaminima,
+                celular: cadete.telefono, // Mantenemos consistencia con otros documentos
+                lat: cadete.lat,
+                lon: cadete.lon,
+                permiteWhatsapp: cadete.permiteWhatsapp,
+                l: new firebase.firestore.GeoPoint(cadete.lat, cadete.lon), // ✅ NUEVO: Guardar GeoPoint
+                g: ngeohash.encode(cadete.lat, cadete.lon) // ✅ NUEVO: Guardar Geohash
+            };
+
+            console.log("Guardando datos de la cadetería en 'cadeterias':", dataToSave);
+
+            const db = firebase.firestore();
+            db.collection("cadeterias").doc(user.uid).set(dataToSave, { merge: true })
+                .then(() => {
+                    alert("¡Perfil de cadetería guardado con éxito!");
+                })
+                .catch((error) => {
+                    console.error("Error al guardar el perfil de la cadetería: ", error);
+                    alert("Hubo un error al guardar tu perfil. Por favor, inténtalo de nuevo.");
+                });
+        });
+    </script>
+
+</body>
+</html>

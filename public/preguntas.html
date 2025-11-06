@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pidoporcelu.com</title>
+    <link rel="shortcut icon" href="recursos/imagenes/icono de la app.png">    <!--start firestore -->
+    <!--start firestore -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!--end firestore -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" xintegrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="estilos.css">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Custom styles for icons in Navbar if needed */
+        .icon-container .fas, .icon-container .bi {
+            color: white; /* Ensure icons are white */
+        }
+        /* Custom style for the WhatsApp button if not defined in estilos.css */
+        .btn-wsp {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background: #25d366;
+            color: #FFF;
+            border-radius: 50%;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 0px 1px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .btn-wsp:hover {
+            text-decoration: none;
+            color: #FFF;
+            background: #20b05b;
+        }
+        /* Estilos adicionales para texto superpuesto en la imagen */
+        .contenedor2 {
+            position: relative;
+            overflow: hidden; /* Asegura que el contenido no se desborde */
+        }
+        .contenedor2 img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .texto-encima, .centrado, .centrado2 {
+            position: absolute;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); /* Sombra para mejor legibilidad */
+            font-weight: bold;
+            text-align: center;
+        }
+        .texto-encima { top: 20%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; }
+        .centrado { top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; }
+        .centrado2 { top: 80%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; }
+    </style>
+
+<!-- Meta Pixel Code -->
+<script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1140817966662956');
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1140817966662956&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- ***** Boton whatsap Start ***** -->
+  <a href="https://api.whatsapp.com/send?phone=5493446416900" class="btn-wsp" target="_blank">
+    <i class="bi bi-whatsapp"></i>
+  </a>
+  <!-- ***** Boton Whatsapp End ***** -->
+    
+    <!-- ***** NavBar inicio ***** -->
+
+      <!---sticky-top pega la navbar a la parte superior   --->
+        <nav class="navbar sticky-top navbar-light bg-blue-800 text-white py-3 px-4 shadow-md">
+        <div class="container-fluid max-w-7xl mx-auto flex justify-between items-center">
+            <!--<a class="navbar-brand" href="#">Tienda1.ar</a>-->
+          
+            <!-- menu desplegable
+                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+          -->
+
+            <div class="icon-container flex space-x-6 justify-center w-full">
+            <a class="fas fa-home text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/">
+            </a>
+            
+      
+            <a class="fas fa-user text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/usuario">
+            </a>
+      
+            <a class="fas fa-shopping-cart text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/carrito">
+            </a>
+                      <a class='fas fa-file-alt text-2xl text-white' href="/compras"></a>
+
+            <a class="fas fa-question-circle text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/preguntas">
+            </a>
+            </div>
+    
+          
+      
+          
+          <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" >
+               <div class="offcanvas-header" >
+                 <!-- <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Filtra tu búsqueda</h5> -->
+                 <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+             </div>
+             <div class="">
+                 
+                    
+                  
+                 
+                   <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                   <!-- <li class="nav-item dropdown">
+                           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                               <h5>Categorías</h5>
+                           </a>
+                           <ul class="dropdown-menu" id="categorias">
+                           </ul>
+                       </li>
+                         <li class="nav-item dropdown">
+                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             <h5>Marcas</h5>
+                         </a>
+                         <ul class="dropdown-menu" id="marcas" >
+                         </ul>
+                     </li>
+
+                     <li class="nav-item">
+                         <a class="nav-link active" aria-current="page" href="index.html"><h5>Eliminar filtros</h5></a>
+
+                     </li>
+                      -->
+                    
+                    
+                     <!-- carrito inicio -->
+
+                  
+
+
+<!-- carrito fin -->
+
+
+                     
+                     </ul>
+                 
+             </div>
+         </div>
+        </div>
+ 
+    </nav>
+
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8">
+        <div class="contenedor2">
+            <img width="100%" src="recursos/imagenes/entregandoPedido.png" alt="Imagen de Pedido Entregado" />
+            <div class="texto-encima"></div>
+            <div class="centrado"></div>
+            <div class="centrado2">Pidoporcelu.com</div>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Qué es pidoporcelu.com?</h5>
+        <p class="text-gray-700">
+            Pidoporcelu.com es una plataforma de compras que te permite realizar la compra de productos que necesitas en el momento. Pidoporcelu.com se encarga de gestionar el pedido y el envío para que lo puedas recibir en tu domicilio en el menor tiempo posible. 
+        </p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Cuál es el límite de compra? </h5>
+        <p class="text-gray-700">El límite de compra está dado por la cantidad disponible. Para la compra de pocas unidades no tendrás problemas.</p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Cuál es el mínimo de compra?</h5>
+        <p class="text-gray-700">No hay mínimo de compra. Puedes comprar una sola unidad de un solo producto.</p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Cuánto demora la entrega?</h5>
+        <p class="text-gray-700">La entrega depende de la disponibilidad del cadete en el momento de la compra. La entrega por lo general no suele demorar mas de 30 minutos. Pero en hora pico este tiempo puede ser mayor. (de 10 a 13 y de 20 a 12).</p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Cuánto cuesta el envío?</h5>
+        <p class="text-gray-700">El envío tiene el costo similar de un delivery para tu zona.</p>
+         <p class="text-gray-700 mb-4">
+           <a href="/tarifasdeenvio" class="text-blue-600 hover:underline">Ver tarifas</a>
+        </p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Qué pasa si no recibí todo lo que pedí?</h5>
+        <p class="text-gray-700">Lo que figura en la plataforma es lo que puedes comprar. Sin embargo algunas veces puede pasar que la cantidad de pedidos supera el stock, si se agotó algún producto, este no se envía y se te descuenta del total.</p>
+    </div>
+    
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-4">
+        <h5 class="font-semibold text-lg text-gray-800 mb-2">¿Como pago el pedido?</h5>
+        <p class="text-gray-700">El pedido lo abonas cuando te llega a tu casa. Lo puedes hacer en efectivo o por transferencia.</p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+  <script src=""></script>
+</body>
+</html>

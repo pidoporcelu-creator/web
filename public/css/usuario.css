@@ -1,0 +1,93 @@
+body{
+
+}
+h6{
+    margin:10px;
+}
+button{
+    font-family: 'Oswald', sans-serif;
+    width: 100%;
+    padding: .5%;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 1.2rem;
+}
+input{
+    font-family: 'Oswald', sans-serif;
+    width: 100%;
+    padding: .2%;
+    font-size: 1.2rem;
+    border-radius: 5px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+.facebook{
+    padding: 1.3%;
+    background-color: #4266b2;
+    color: whitesmoke;
+}
+.github{
+    padding: 1.3%;
+    background-color: #25292f;
+    color: whitesmoke;
+}
+.twitter{
+    padding: 1.3%;
+    background-color: #1ea0f2;
+    color: whitesmoke;
+}
+.google{
+    padding: 1.3%;
+    background-color: #ea4235;
+    color: whitesmoke;
+}
+.number{
+    background-color: #25D366;
+    color: whitesmoke;
+}
+h1{
+    font-size: 2rem;
+}
+
+section{
+    width: 100%;
+    padding: 1% 10%;    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.hide{
+    display: none;
+}
+
+.show{
+    display: block;    
+}
+
+article{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+article div {
+    width: 30%;
+}
+.firebase{
+    width: 50px;
+    vertical-align: middle;
+}
+#error{
+    color: red;
+}
+#photo{
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+}
+#profile article div {
+    width: 45%;
+}
+
+
+ 

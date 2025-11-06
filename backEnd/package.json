@@ -1,0 +1,16 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Web store backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "tienda1",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mercadopago": "^1.5.9"
+  }
+}

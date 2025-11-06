@@ -1,0 +1,190 @@
+package com.pidoporcelu.app.ui.detalle_envio
+
+import android.annotation.SuppressLint
+import android.content.Context // <-- AÑADIDO
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.LocationServices // <-- AÑADIDO
+import com.google.android.gms.location.Priority
+import com.google.firebase.firestore.GeoPoint
+import com.pidoporcelu.app.data.EnvioRepository
+import com.pidoporcelu.app.data.model.Envio
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await // <-- AÑADIDO
+
+
+const val TAG = "DetalleEnvioViewModel"
+
+// ✅ PASO 1: ELIMINA EL ESTADO 'EnvioFinalizado' DE LA UI
+// La navegación ya no será un estado, sino un evento.
+sealed interface DetalleEnvioUiState {
+    data object Cargando : DetalleEnvioUiState
+    // Añade ubicacionActual al estado Exito
+    data class Exito(
+        val envio: Envio,
+        val ubicacionActual: GeoPoint? = null, // <-- Añade esta propiedad
+        val estaFinalizando: Boolean = false
+    ) : DetalleEnvioUiState
+    data class Error(val mensaje: String) : DetalleEnvioUiState
+}
+
+class DetalleEnvioViewModel(
+    private val envioId: String,
+    private val repository: EnvioRepository,
+    private val context: Context
+
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<DetalleEnvioUiState>(DetalleEnvioUiState.Cargando)
+    val uiState = _uiState.asStateFlow()
+
+    // ✅ PASO 2: CREA UN CHANNEL PARA LOS EVENTOS DE NAVEGACIÓN
+    // Esto asegura que el evento de "navegar hacia atrás" se consuma una sola vez.
+    private val _navigationEvent = Channel<Unit>()
+    val navigationEvent = _navigationEvent.receiveAsFlow()
+
+    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+    init {
+        cargarDetallesDelEnvio()
+    }
+
+
+    @SuppressLint("MissingPermission") // El permiso se verifica en la UI antes de llamar
+    fun obtenerUbicacionActual() {
+        viewModelScope.launch {
+            try {
+                val location = fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+                if (location != null) {
+                    val geoPoint = GeoPoint(location.latitude, location.longitude)
+                    // Actualiza el estado de la UI con la ubicación
+                    _uiState.update { currentState ->
+                        if (currentState is DetalleEnvioUiState.Exito) {
+                            currentState.copy(ubicacionActual = geoPoint)
+                        } else {
+                            currentState
+                        }
+                    }
+                    Log.d(TAG, "Ubicación obtenida: $geoPoint")
+                } else {
+                    Log.w(TAG, "La ubicación obtenida es nula.")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error al obtener la ubicación", e)
+                _uiState.value = DetalleEnvioUiState.Error("No se pudo obtener la ubicación: ${e.message}")
+            }
+        }
+    }
+
+    fun cargarDetallesDelEnvio() {
+        viewModelScope.launch {
+            _uiState.value = DetalleEnvioUiState.Cargando
+            val resultado: Envio? = repository.getEnvioById(envioId)
+            if (resultado != null) {
+                _uiState.value = DetalleEnvioUiState.Exito(resultado, estaFinalizando = false)
+            } else {
+                _uiState.value = DetalleEnvioUiState.Error("No se encontró el envío o hubo un error al cargarlo.")
+            }
+        }
+    }
+    @SuppressLint("MissingPermission")
+    fun finalizarEnvio(descansar: Boolean) {
+        _uiState.update { currentState ->
+            if (currentState is DetalleEnvioUiState.Exito) {
+                currentState.copy(estaFinalizando = true)
+            } else {
+                currentState
+            }
+        }
+        viewModelScope.launch {
+            try {
+                // 1. Obtenemos la ubicación actual AHORA MISMO.
+                val location = fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+                if (location != null) {
+                    val geoPoint = GeoPoint(location.latitude, location.longitude)
+                    Log.d(TAG, "Ubicación obtenida al finalizar: $geoPoint")
+
+                    // 2. Con la ubicación obtenida, llamamos a la lógica para marcar como entregado.
+                    marcarComoEntregado(geoPoint, descansar)
+
+                } else {
+                    Log.w(TAG, "No se pudo obtener la ubicación para finalizar el envío.")
+                    _uiState.value = DetalleEnvioUiState.Error("No se pudo obtener la ubicación actual para finalizar el envío.")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error al obtener la ubicación para finalizar", e)
+                _uiState.value = DetalleEnvioUiState.Error("Error al obtener ubicación: ${e.message}")
+            }
+        }
+    }
+
+
+    private  fun marcarComoEntregado(ubicacionActual: GeoPoint, descansar: Boolean) {
+        viewModelScope.launch {
+            try {
+                Log.d("FLUJO_APP", "DETALLE_VM: 1. Inicia marcarComoEntregado.")
+                repository.marcarEnvioComoEntregado(envioId, ubicacionActual, descansar)
+                Log.d(TAG, "Transacción completada. Enviando evento de navegación por el Channel.")
+
+                // ✅ PASO 3: ENVÍA EL EVENTO A TRAVÉS DEL CHANNEL
+                // En lugar de cambiar el _uiState, enviamos un evento que la UI escuchará.
+                Log.d("FLUJO_APP", "DETALLE_VM: 2. Transacción en Firestore COMPLETADA.")
+                _navigationEvent.send(Unit)
+                Log.d("FLUJO_APP", "DETALLE_VM: 3. Evento de navegación ENVIADO al Channel.")
+            } catch (e: Exception) {
+                _uiState.value = DetalleEnvioUiState.Error("Error al finalizar el envío: ${e.message}")
+                Log.e(TAG, "Error en la transacción de marcarComoEntregado", e)
+            }
+        }
+    }
+}
+
+
+
+
+package com.pidoporcelu.app.ui.detalle_envio
+
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.pidoporcelu.app.data.EnvioRepository
+
+class DetalleEnvioViewModelFactory(
+    private val envioId: String,
+    private val repository: EnvioRepository,
+    private val context: Context
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(DetalleEnvioViewModel::class.java)) {
+
+            Log.d("VMFactory", "Creando DetalleEnvioViewModel con envioId: '$envioId'")
+            @Suppress("UNCHECKED_CAST")
+            return DetalleEnvioViewModel(envioId, repository, context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+
+
+
+los archivos.
+Abre un terminal en la carpeta raíz de tu proyecto. Hay varias formas de hacerlo:
+Opción A (La más fácil): En Android Studio, en la parte inferior, haz clic en la pestaña "Terminal". Esto abrirá un terminal ya ubicado en la carpeta correcta de tu proyecto.
+Opción B (Manualmente): Abre el Explorador de Archivos de Windows y navega hasta la carpeta raíz de tu proyecto (la que contiene los archivos gradlew.bat, settings.gradle.kts, etc.). En la barra de direcciones, escribe cmd y presiona Enter. Esto abrirá una ventana del Símbolo del sistema en esa ubicación.
+Ejecuta el comando para Windows. En lugar de ./gradlew, en Windows se utiliza el archivo de script por lotes gradlew.bat. El comando es:
+
+los archivos.
+Abre un terminal en la carpeta raíz de tu proyecto. Hay varias formas de hacerlo:
+Opción A (La más fácil): En Android Studio, en la parte inferior, haz clic en la pestaña "Terminal". Esto abrirá un terminal ya ubicado en la carpeta correcta de tu proyecto.
+Opción B (Manualmente): Abre el Explorador de Archivos de Windows y navega hasta la carpeta raíz de tu proyecto (la que contiene los archivos gradlew.bat, settings.gradle.kts, etc.). En la barra de direcciones, escribe cmd y presiona Enter. Esto abrirá una ventana del Símbolo del sistema en esa ubicación.
+Ejecuta el comando para Windows. En lugar de ./gradlew, en Windows se utiliza el archivo de script por lotes gradlew.bat. El comando es:
+
+gradlew.bat clean

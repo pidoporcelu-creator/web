@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Cadetes</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1c1e21;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ccd0d5;
+            margin-bottom: 1.5rem;
+        }
+        .tab-button {
+            padding: 0.8rem 1.2rem;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #606770;
+            position: relative;
+            transition: color 0.2s;
+        }
+        .tab-button:hover {
+            background-color: #f0f2f5;
+        }
+        .tab-button.active {
+            color: #1877f2;
+        }
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #1877f2;
+            border-radius: 3px 3px 0 0;
+        }
+        .cadete-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .cadete-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid #ccd0d5;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        .cadete-card img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .cadete-info {
+            flex-grow: 1;
+        }
+        .cadete-info h3 {
+            margin: 0 0 0.25rem 0;
+            color: #1c1e21;
+        }
+        .cadete-info p {
+            margin: 0;
+            color: #606770;
+            font-size: 0.9rem;
+        }
+        .cadete-actions button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .suspend-btn {
+            background-color: #fa3e3e;
+            color: white;
+        }
+        .suspend-btn:hover {
+            background-color: #e03030;
+        }
+        .reactivate-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .reactivate-btn:hover {
+            background-color: #45a049;
+        }
+        #loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: #606770;
+        }
+        /* ✅ NUEVO: Estilos para el botón de actualizar */
+        .refresh-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1877f2;
+            background-color: transparent;
+            border: 1px solid #1877f2;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .refresh-btn:hover {
+            background-color: #e7f3ff; /* Un azul muy claro */
+        }
+        /* ✅ NUEVO: Estilos para la vista de tabla */
+        .cadete-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .cadete-table th, .cadete-table td {
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+        .cadete-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+            color: #333;
+        }
+        .cadete-table tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+        /* ✅ NUEVO: Estilo para las cabeceras de tabla clickeables */
+        .cadete-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        /* ✅ NUEVO: Estilos para colorear las filas según el estado */
+        .cadete-table tr.estado-ocupado {
+            background-color: #e3f2fd; /* Azul claro */
+        }
+        .cadete-table tr.estado-suspendido,
+        .cadete-table tr.estado-inactivo {
+            background-color: #fbe9e7; /* Rojo/Naranja muy claro */
+        }
+        .cadete-table tr.estado-activo {
+            background-color: #e8f5e9; /* Verde claro */
+        }
+        .cadete-table tr:hover {
+            background-color: #f5f5f5; /* Gris claro al pasar el mouse */
+        }
+        /* ✅ NUEVO: Estilo para las filas clickeables en la tabla de ocupados */
+        .cadete-table tbody tr.clickable-row {
+            cursor: pointer;
+        }
+        /* ✅ NUEVO: Estilos para la ventana modal */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .close-button {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1>Gestión de Cadetes</h1>
+            <!-- ✅ NUEVO: Botón para actualizar manualmente los datos -->
+            <button id="refresh-btn" class="refresh-btn">Actualizar</button>
+        </div>
+        <div class="tabs">
+            <button class="tab-button active" data-estado="todos">Todos</button>
+            <button class="tab-button" data-estado="activo">Activos</button>
+            <button class="tab-button" data-estado="ocupado">Ocupados</button>
+            <button class="tab-button" data-estado="suspendido">Suspendidos</button>
+            <button class="tab-button" data-estado="inactivo">Inactivos</button>
+        </div>
+
+        <div id="cadete-list" class="cadete-list">
+            <!-- Los cadetes se cargarán aquí -->
+        </div>
+        <div id="loading-spinner" style="display: none;">Cargando...</div>
+    </div>
+
+    <!-- ✅ NUEVO: Estructura de la ventana modal para detalles del envío -->
+    <div id="envio-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalles del Envío</h2>
+                <span class="close-button">&times;</span>
+            </div>
+            <div id="modal-body">
+                <!-- El contenido se cargará aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { iniciarFirebase } from './funciones.js';
+        iniciarFirebase();
+
+        const db = firebase.firestore();
+        const cadeteListContainer = document.getElementById('cadete-list');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const tabsContainer = document.querySelector('.tabs');
+
+        // ✅ NUEVO: Variables para gestionar el ordenamiento de la tabla
+        let tableData = []; // Almacenará los datos para las vistas de tabla
+        let sortConfig = { column: 'horaInicio', direction: 'asc' };
+
+
+        let idCadeteriaActual = null;
+
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                // Asumimos que el admin/dueño de la cadetería es el usuario logueado
+                idCadeteriaActual = user.uid;
+                cargarCadetes('todos'); // Cargar la nueva pestaña "Todos" por defecto
+            } else {
+                window.location.href = 'usuario.html'; // Redirigir si no está logueado
+            }
+        });
+
+        // ✅ NUEVO: Event listener para el botón de actualizar
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            const activeTab = tabsContainer.querySelector('.tab-button.active');
+            if (activeTab) {
+                const estado = activeTab.dataset.estado;
+                cargarCadetes(estado);
+            }
+        });
+
+        tabsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-button')) {
+                // Quitar clase activa de todas las pestañas
+                tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                // Añadir clase activa a la pestaña clickeada
+                e.target.classList.add('active');
+                
+                const estado = e.target.dataset.estado;
+                cargarCadetes(estado);
+            }
+        });
+
+        async function cargarCadetes(estado) {
+            if (!idCadeteriaActual) return;
+
+            loadingSpinner.style.display = 'block';
+            cadeteListContainer.innerHTML = '';
+
+            // ✅ MEJORA: Si la pestaña es "Ocupados" o "Todos", preparamos la estructura de la tabla.
+            if (estado === 'ocupado' || estado === 'todos') {
+                cadeteListContainer.innerHTML = `
+                    <table class="cadete-table">
+                        <thead>
+                            <tr>
+                                <!-- ✅ MEJORA: Añadida clase 'sortable' y data-column para el ordenamiento -->
+                                <th class="sortable" data-column="nombre">Nombre</th>
+                                <th class="sortable" data-column="vehiculo">Patente / Vehículo</th>
+                                ${estado === 'todos' ? '<th class="sortable" data-column="estado">Estado</th>' : ''}
+                                <th class="sortable" data-column="origen">Origen</th>
+                                <th class="sortable" data-column="destino">Destino</th>
+                                ${estado === 'ocupado' ? '<th class="sortable" data-column="horaInicio">Hora de Inicio</th>' : ''}
+                                ${estado === 'todos' ? '<th>Acción</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Las filas de los cadetes se insertarán aquí -->
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            // ✅ NUEVO: Añadir listeners para el ordenamiento solo si estamos en la vista de tabla
+            if (estado === 'ocupado' || estado === 'todos') {
+                cadeteListContainer.querySelectorAll('.sortable').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const column = header.dataset.column;
+                        sortConfig.direction = (sortConfig.column === column && sortConfig.direction === 'asc') ? 'desc' : 'asc';
+                        sortConfig.column = column;
+                        renderSortedTable();
+                    });
+                });
+            }
+
+            try {
+                // ✅ MEJORA: La consulta se adapta según la pestaña seleccionada.
+                let cadetesQuery = db.collection('usuarios')
+                    .where('idCadeteria', '==', idCadeteriaActual)
+                    .where('rol', '==', 'cadete');
+
+                // ✅ CORRECCIÓN: Asegurarse de que la consulta para 'todos' no filtre por estado.
+                // Las otras pestañas sí filtrarán por el estado correspondiente.
+                if (estado !== 'todos') {
+                    cadetesQuery = cadetesQuery.where('estado', '==', estado);
+                }
+
+                const querySnapshot = await cadetesQuery.get();
+
+                if (querySnapshot.empty) {
+                    // Si la tabla ya fue creada, muestra el mensaje dentro de ella.
+                    if (estado === 'ocupado' || estado === 'todos') {
+                        const colspan = estado === 'todos' ? 7 : 5;
+                        cadeteListContainer.querySelector('tbody').innerHTML = `<tr><td colspan="${colspan}">No hay cadetes con el estado "${estado}".</td></tr>`;
+                    } else {
+                        cadeteListContainer.innerHTML = `<p>No hay cadetes con el estado "${estado}".</p>`;
+                    }
+                } else {
+                    if (estado === 'ocupado' || estado === 'todos') {
+                        // ✅ MEJORA: Primero obtenemos todos los datos, luego renderizamos la tabla.
+                        const dataPromises = querySnapshot.docs.map(doc => getTableData(doc.id, doc.data()));
+                        tableData = await Promise.all(dataPromises);
+                        renderSortedTable(); // Renderiza la tabla ordenada por primera vez
+                    } else {
+                        // Lógica original para la vista de tarjetas
+                        querySnapshot.forEach(doc => {
+                            const cadete = doc.data();
+                            const cadeteId = doc.id;
+                            renderCadeteCard(cadete, cadeteId, estado);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error al cargar los cadetes:", error);
+                cadeteListContainer.innerHTML = '<p>Ocurrió un error al cargar los cadetes.</p>';
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        // ✅ NUEVO: Función para obtener los datos de un cadete ocupado y su envío.
+        async function getTableData(cadeteId, cadete) {
+            let origen = 'No disponible';
+            let destino = 'No disponible';
+            let horaInicio = 'No disponible';
+            let fechaObj = null; // Para ordenar por fecha
+            let envioId = null; // ✅ NUEVO: para guardar el ID del envío
+
+            // Si el cadete tiene un envío asignado, buscamos los detalles.
+            if (cadete.estado === 'ocupado' && cadete.envioAsignadoId) {
+                try {
+                    const envioDoc = await db.collection('envios').doc(cadete.envioAsignadoId).get();
+                    if (envioDoc.exists) {
+                        const envioData = envioDoc.data();
+                        origen = envioData.origen?.direccion || 'No especificado';
+                        destino = envioData.destino?.direccion || 'No especificado';
+                        // Formateamos la fecha para que sea legible.
+                        if (envioData.fecha && envioData.fecha.toDate) {
+                            fechaObj = envioData.fecha.toDate();
+                            horaInicio = envioData.fecha.toDate().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error al obtener detalles del envío ${cadete.envioAsignadoId}:`, error);
+                }
+            }
+
+            return {
+                id: cadeteId,
+                nombre: cadete.nombre || 'Sin Nombre',
+                vehiculo: cadete.vehiculo || 'No especificado',
+                estado: cadete.estado || 'desconocido',
+                envioId: cadete.envioAsignadoId || null, // ✅ NUEVO: Añadir el ID del envío a los datos
+                origen: origen,
+                destino: destino,
+                horaInicio: horaInicio,
+                fechaObj: fechaObj // Guardamos el objeto Date para ordenar
+            };
+        }
+
+        // ✅ NUEVO: Función para ordenar y renderizar la tabla de ocupados.
+        function renderSortedTable() {
+            const tableBody = cadeteListContainer.querySelector('tbody');
+            if (!tableBody) return;
+
+            // Ordenar los datos
+            tableData.sort((a, b) => {
+                const valA = sortConfig.column === 'horaInicio' ? a.fechaObj : a[sortConfig.column];
+                const valB = sortConfig.column === 'horaInicio' ? b.fechaObj : b[sortConfig.column];
+
+                if (valA === null || valA < valB) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (valB === null || valA > valB) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+
+            // Limpiar y renderizar
+            tableBody.innerHTML = '';
+            const currentTab = tabsContainer.querySelector('.active').dataset.estado;
+
+            tableData.forEach(data => {
+                const row = document.createElement('tr');
+                // ✅ MEJORA: Si la fila corresponde a un envío, la hacemos clickeable.
+                if (currentTab === 'ocupado' && data.envioId) {
+                    row.classList.add('clickable-row');
+                    row.dataset.envioId = data.envioId;
+                }
+
+                // ✅ NUEVO: Añadir clase de estado para colorear la fila
+                row.classList.add(`estado-${data.estado}`);
+
+                let actionButtonHTML = '<td>N/A</td>';
+                if (currentTab === 'todos') {
+                    if (data.estado === 'activo' || data.estado === 'ocupado') {
+                        actionButtonHTML = `<td><button class="suspend-btn" data-id="${data.id}">Suspender</button></td>`;
+                    } else if (data.estado === 'suspendido' || data.estado === 'inactivo') {
+                        actionButtonHTML = `<td><button class="reactivate-btn" data-id="${data.id}">Reactivar</button></td>`;
+                    }
+                }
+
+                if (currentTab === 'todos') {
+                    row.innerHTML = `
+                        <td>${data.nombre}</td>
+                        <td>${data.vehiculo}</td>
+                        <td>${data.estado}</td>
+                        <td>${data.origen}</td>
+                        <td>${data.destino}</td>
+                        ${actionButtonHTML}
+                    `;
+                } else { // Vista 'ocupado'
+                    row.innerHTML = `
+                        <td>${data.nombre}</td>
+                        <td>${data.vehiculo}</td>
+                        <td>${data.origen}</td>
+                        <td>${data.destino}</td>
+                        <td>${data.horaInicio}</td>
+                    `;
+                }
+                tableBody.appendChild(row);
+            });
+
+            // Actualizar indicadores visuales en las cabeceras
+            cadeteListContainer.querySelectorAll('.sortable').forEach(header => {
+                header.textContent = header.textContent.replace(/ ↑| ↓/g, ''); // Limpiar flechas anteriores
+                if (header.dataset.column === sortConfig.column) {
+                    header.textContent += sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+                }
+            });
+        }
+
+        function renderCadeteCard(cadete, cadeteId, estado) {
+            const card = document.createElement('div');
+            card.className = 'cadete-card';
+
+            let actionButtonHTML = '';
+            if (estado === 'activo' || estado === 'ocupado') {
+                actionButtonHTML = `<button class="suspend-btn" data-id="${cadeteId}">Suspender</button>`;
+            } else if (estado === 'suspendido' || estado === 'inactivo') {
+                actionButtonHTML = `<button class="reactivate-btn" data-id="${cadeteId}">Reactivar</button>`;
+            }
+
+            card.innerHTML = `
+                <img src="${cadete.imagen || 'recursos/imagenes/cadete_default.png'}" alt="Logo del cadete">
+                <div class="cadete-info">
+                    <h3>${cadete.nombre || 'Sin Nombre'}</h3>
+                    <!-- ✅ MEJORA: Mostrar estado "En envío" si el cadete está ocupado -->
+                    ${estado === 'ocupado' && cadete.envioAsignadoId ? `<p style="color: #1877f2; font-weight: bold;">En envío: ${cadete.envioAsignadoId.substring(0,10)}...</p>` : ''}
+                    <p>${cadete.vehiculo || 'Vehículo no especificado'}</p>
+                </div>
+                <div class="cadete-actions">
+                    ${actionButtonHTML}
+                </div>
+            `;
+            cadeteListContainer.appendChild(card);
+        }
+
+        // --- Lógica de la Ventana Modal ---
+        const modal = document.getElementById('envio-modal');
+        const modalBody = document.getElementById('modal-body');
+        const closeButton = document.querySelector('.close-button');
+
+        // Función para mostrar los detalles del envío en la modal
+        async function showEnvioDetails(envioId) {
+            modal.style.display = 'block';
+            modalBody.innerHTML = '<p>Cargando detalles del envío...</p>';
+
+            try {
+                const envioDoc = await db.collection('envios').doc(envioId).get();
+                if (envioDoc.exists) {
+                    const data = envioDoc.data();
+                    modalBody.innerHTML = `
+                        <p><strong>Cliente:</strong> ${data.cliente || 'No especificado'}</p>
+                        <p><strong>Origen:</strong> ${data.origen?.direccion || 'No especificado'}</p>
+                        <p><strong>Destino:</strong> ${data.destino?.direccion || 'No especificado'}</p>
+                        <p><strong>Distancia:</strong> ${data.distancia || 'N/A'}</p>
+                        <p><strong>Costo:</strong> $${data.costoEnvio?.toFixed(2) || 'N/A'}</p>
+                        <p><strong>Fecha:</strong> ${data.fecha?.toDate().toLocaleString('es-AR') || 'N/A'}</p>
+                    `;
+                } else {
+                    modalBody.innerHTML = '<p>Error: No se encontraron los detalles de este envío.</p>';
+                }
+            } catch (error) {
+                console.error("Error al obtener detalles del envío:", error);
+                modalBody.innerHTML = '<p>Ocurrió un error al cargar los detalles.</p>';
+            }
+        }
+
+        // Eventos para cerrar la modal
+        closeButton.onclick = () => { modal.style.display = 'none'; };
+        window.onclick = (event) => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        // Nota: La lógica para suspender/reactivar cadetes debería llamar
+        // a las Cloud Functions correspondientes (ej: 'suspenderCadete').
+        // Esta parte se deja como ejercicio para conectar con el backend.
+        cadeteListContainer.addEventListener('click', async (e) => {
+            // ✅ NUEVO: Lógica para hacer click en una fila de la tabla de ocupados
+            const clickedRow = e.target.closest('tr.clickable-row');
+            if (clickedRow) {
+                const envioId = clickedRow.dataset.envioId;
+                if (envioId) {
+                    showEnvioDetails(envioId); // Mostrar la modal en lugar de redirigir
+                }
+                return; // Detenemos la ejecución para no procesar otros clicks en la fila.
+            }
+
+            const target = e.target;
+            const cadeteId = target.dataset.id;
+
+            if (!cadeteId) return;
+
+            if (target.classList.contains('suspend-btn')) {
+                const dias = prompt("¿Por cuántos días deseas suspender al cadete? (Ingresa 0 para quitar la suspensión)");
+                if (dias === null) return; // El usuario canceló
+                
+                const diasNum = parseInt(dias, 10);
+                if (isNaN(diasNum) || diasNum < 0) {
+                    alert("Por favor, ingresa un número válido de días (0 o más).");
+                    return;
+                }
+                
+                // Aquí iría la llamada a la Cloud Function para suspender
+                alert(`Llamada para suspender al cadete ${cadeteId} por ${diasNum} días.`);
+                console.log(`Suspender cadete ${cadeteId} por ${diasNum} días.`);
+
+            } else if (target.classList.contains('reactivate-btn')) {
+                // Aquí iría la llamada a la Cloud Function para reactivar
+                alert(`Llamada para reactivar al cadete ${cadeteId}.`);
+                console.log(`Reactivar cadete ${cadeteId}.`);
+            }
+        });
+
+    </script>
+</body>
+</html>

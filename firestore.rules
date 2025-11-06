@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /envios/{envioId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth.uid != null &&
+                       request.auth.uid == request.resource.data.usuarioId;
+
+      // --- REGLA DE ACTUALIZACIÓN CORREGIDA Y MÁS COMPLETA ---
+      allow update: if request.auth.uid != null && (
+                      // CASO 1: Un cadete se asigna a un envío libre.
+                      (resource.data.cadeteId == null && request.resource.data.cadeteId == request.auth.uid) ||
+
+                      // CASO 2: El cadete ya asignado está actualizando el envío (ej: marcar como entregado).
+                      (resource.data.cadeteId == request.auth.uid) ||
+
+                      // CASO 3: El usuario que creó el envío lo está actualizando (ej: para cancelar).
+                      (resource.data.usuarioId == request.auth.uid)
+                    );
+
+      allow delete: if false;
+    }
+
+    // ... (El resto de tus reglas para usuarios, cadeterias, etc., están bien y no necesitan cambios)
+    match /usuarios/{userId} {
+      // Un usuario puede leer y escribir su propio perfil.
+      allow read, write: if request.auth.uid == userId;
+      // Un usuario puede leer su propio perfil, O una 'cadeteria' puede leer los perfiles de sus cadetes.
+       allow write: if request.auth.uid != null &&
+                     // Obtenemos el perfil de quien hace la petición (la cadetería)
+                     get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'cadeteria' &&
+                     // Verificamos que el perfil del cadete que se quiere editar le pertenece.
+                     resource.data.idCadeteria == request.auth.uid;
+
+       match /device_tokens/{tokenId} {
+        allow write: if request.auth.uid == userId;
+      }
+    }
+     
+    match /cadeterias/{cadeteriaId} {
+      allow read: if true;
+      // Un usuario puede escribir en su propio perfil de cadetería SIEMPRE Y CUANDO:
+      // 1. Esté autenticado y sea el dueño del documento.
+      // 2. El 'nickUrl' que intenta guardar no exista en ningún otro documento,
+      //    O si existe, que pertenezca a su propio documento (para permitirle guardar sin cambiar su nick).
+      allow write: if request.auth.uid == cadeteriaId &&
+                      (getAfter(/databases/$(database)/documents/cadeterias?nickUrl=$(request.resource.data.nickUrl)).size() == 0 ||
+                       get(/databases/$(database)/documents/cadeterias/$(cadeteriaId)).data.nickUrl == request.resource.data.nickUrl);
+    }
+
+    match /datosGenerales/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+        match /CADETES/{userId} {
+      // Permite a un usuario leer y escribir su propio documento en la colección CADETES.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

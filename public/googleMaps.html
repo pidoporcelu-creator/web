@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Dirección en Google Maps</title>
+    <!-- Tailwind CSS CDN para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados para la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Asegura que el iframe sea responsive */
+        .map-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio (height / width * 100%) */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.5rem; /* Bordes redondeados */
+        }
+        .map-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            border-radius: 0.5rem; /* Bordes redondeados */
+        }
+        /* Estilos para el mensaje de error/información */
+        .message-box {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ef9a9a;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            text-align: center;
+            display: none; /* Oculto por defecto */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Buscar Dirección en el Mapa</h1>
+
+        <div class="mb-6">
+            <label for="addressInput" class="block text-gray-700 text-sm font-semibold mb-2">
+                Ingresa una dirección:
+            </label>
+            <input
+                type="text"
+                id="addressInput"
+                placeholder="Ejemplo: urquiza 545, Gualeguaychu, Entre Rios, Argentina"
+                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+            >
+        </div>
+
+        <button
+            id="searchButton"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 mb-6"
+        >
+            Buscar en el Mapa
+        </button>
+
+        <!-- Contenedor para mensajes de usuario -->
+        <div id="messageBox" class="message-box"></div>
+
+        <div class="map-container">
+            <iframe
+                id="googleMapIframe"
+                src=""
+                allowfullscreen=""
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+        </div>
+
+         <p class="text-sm text-gray-500 mt-4 text-center">
+            <strong>Nota:</strong> se lo mas especifico posible, calle, numero, barrio, localidad
+        </p>
+    </div>
+
+  
+    <script src="googleMaps.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda 1</title>
+    <link rel="shortcut icon" href="recursos/imagenes/icono de la app.png">    <!--start firestore -->
+
+    <!--start firestore -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!--end firestore -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" xintegrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="estilos.css">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for icons in Navbar if needed */
+        .icon-container .fas, .icon-container .bi {
+            color: white; /* Ensure icons are white */
+        }
+        /* Custom style for the WhatsApp button if not defined in estilos.css */
+        .btn-wsp {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background: #25d366;
+            color: #FFF;
+            border-radius: 50%;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 0px 1px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .btn-wsp:hover {
+            text-decoration: none;
+            color: #FFF;
+            background: #20b05b;
+        }
+    </style>
+
+<!-- Meta Pixel Code -->
+<script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1140817966662956');
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1140817966662956&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- ***** Boton whatsap Start ***** -->
+  <a href="https://api.whatsapp.com/send?phone=+5493446416900" class="btn-wsp" target="_blank">
+    <i class="bi bi-whatsapp"></i>
+  </a>
+  <!-- ***** Boton Whatsapp End ***** -->
+    
+    <!-- ***** NavBar inicio ***** -->
+
+      <!---sticky-top pega la navbar a la parte superior   --->
+        <nav class="navbar sticky-top navbar-light bg-blue-800 text-white py-3 px-4 shadow-md">
+        <div class="container-fluid max-w-7xl mx-auto flex justify-between items-center">
+            <!--<a class="navbar-brand" href="#">Tienda1.ar</a>-->
+          
+            <!-- menu desplegable
+                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+          -->
+
+            <div class="icon-container flex space-x-6 justify-center w-full">
+            <a class="fas fa-home text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="index.html">
+            </a>
+            
+      
+            <a class="fas fa-user text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="usuario.html">
+            </a>
+      
+            <a class="fas fa-shopping-cart text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="carrito.html">
+            </a>
+                      <a class='fas fa-file-alt text-2xl text-white' href="compras.html"></a>
+
+            <a class="fas fa-question-circle text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="preguntas.html">
+            </a>
+            </div>
+    
+          
+      
+          
+          <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" >
+               <div class="offcanvas-header" >
+                 <!-- <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Filtra tu búsqueda</h5> -->
+                 <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+             </div>
+             <div class="">
+                 
+                    
+                  
+                 
+                   <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                   <!-- <li class="nav-item dropdown">
+                           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                               <h5>Categorías</h5>
+                           </a>
+                           <ul class="dropdown-menu" id="categorias">
+                           </ul>
+                       </li>
+                         <li class="nav-item dropdown">
+                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             <h5>Marcas</h5>
+                         </a>
+                         <ul class="dropdown-menu" id="marcas" >
+                         </ul>
+                     </li>
+
+                     <li class="nav-item">
+                         <a class="nav-link active" aria-current="page" href="index.html"><h5>Eliminar filtros</h5></a>
+
+                     </li>
+                      -->
+                    
+                    
+                     <!-- carrito inicio -->
+
+                  
+
+
+<!-- carrito fin -->
+
+
+                     
+                     </ul>
+                 
+             </div>
+         </div>
+        </div>
+ 
+    </nav>
+
+
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <!-- Última compra section -->
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8">
+        <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b">Gracias por su compra</h2>
+        <div id="horario" class="text-gray-700"></div>
+    </div>
+
+    <!-- Carrito section -->
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8" id="contenedorPadre">
+        <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b">Carrito</h2>
+        <table class="table w-full mb-0">
+            <tbody id="items"></tbody>
+            <tfoot>
+                <tr id="footer">
+                    <th scope="row" colspan="6" class="text-center text-gray-600 py-3">No hay compras para mostrar</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+        
+
+    <!-- Datos de envío section -->
+    <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8" id="contenedorPadreEnvio">
+        <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b">Datos de envío</h2>
+        <p class="text-gray-700 mb-4">
+            Envío a cargo del comprador. <a href="tarifasdeenvio.html" class="text-blue-600 hover:underline">Ver tarifas</a>
+        </p>
+        <section class="appInfo">
+            <article class="privateInfo">
+                <div id="task-form-envio" class="form-container">
+                    <form class="loginForm flex flex-col" name="loginForm" id="formulario1">
+                        <div id="hiddenPrivateInfo3"></div>
+                        <div class="mt-4 w-full">
+                        </div>
+                    </form>
+                </div>
+                <div id="hiddenPrivateInfo2" class="mt-4">
+                    <p class="loading"></p>
+                </div>
+            </article>
+        </section>
+    </div>
+  </main>
+    
+  <!-- Templates -->
+  <template id="template-footer">
+      <td colspan="4" class="text-gray-700">subtotal</td>
+      <td class="font-bold text-right">$ <span>5000</span></td>
+  </template> 
+  
+  <template id="template-footer2">
+      <td colspan="5" class="text-gray-700 text-center">total con descuentos (no incluye delivery)</td>
+      <td class="font-bold text-right">$ <span>5000</span></td>
+  </template>
+      
+
+    
+  <template id="template-carrito">
+    <tr>
+        <td><img src="" alt="" class="w-16 h-16 object-cover rounded-md" id="imagenProducto"></td>
+        <td class="w-full align-middle text-gray-800 font-semibold"> Café</td>     
+        <td class="align-middle">
+        </td>
+        <td class="text-center align-middle text-gray-700">id</td>
+        <td class="align-middle">
+        </td>
+        <td class="text-right align-middle font-bold"><span>500</span></td>
+    </tr>
+  </template>
+  
+  <template id="template-categorias">
+      <li class="categoria dropdown-item" id="idFiltro">
+          <a id="boxer" class="dropdown-item" href="#">Boxer</a>
+      </li>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+   <script src="objetos.js" type="module"></script>
+     <script src="funciones.js" type="module"></script>
+  <script src="graciasPorSuCompra.js" type="module"></script>
+
+ 
+
+</body>
+</html>

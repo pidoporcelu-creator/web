@@ -1,0 +1,6 @@
+usuarios:
+cadete   : 3446000001   pass 123456
+cadeteria: 3446000002  pass 123456 la veloz
+
+
+falta la logica para iniciar sesion si perdio el celu. Falta el boton para iniciar con google en caso de perder el celu y que ya halla iniciado sesion con google antes.

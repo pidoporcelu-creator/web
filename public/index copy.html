@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda 1</title>
+    <link rel="shortcut icon" href="recursos/imagenes/logo tienda1 rosa.png">
+<!--start firestore -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<!--end firestore -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+      integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
+      crossorigin="anonymous"
+    />
+
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="estilos.css">
+  </head>
+  <body>
+
+      <!-- ***** Boton whatsap Start ***** -->
+
+      <a href="" class="btn-wsp"  id="btn-wsp">
+        <i class="bi bi-whatsapp"></i>
+    </a>
+    <!-- ***** Boton Whatsapp End ***** -->
+
+         <!-- Navigation-->
+         <nav class="navbar navbar-expand-lg navbar-light fixed-top shadow-sm" id="mainNav">
+          <div class="container px-1" >
+              
+              
+              <a href="index.html" class="logo"><img src="recursos/imagenes/logo tienda1.png" alt="waves" width="25" height="25"><em></em></a>
+              
+              
+  
+              </button>
+              
+
+                      <div id="inicio345" style = "float: left"><a class="" href="inicio.html"><h4>Inicio</h4></a></div>
+                      <div id="carrito345" style = "float: left"><a class="" href="carrito.html"><h4>Carrito</h4></a></div>
+                      <div id="usuario345" style = "float: left"><a class="" href="login.html"><h4>Usuario</h4></a></div>
+                 
+                    
+       
+          </div>
+      </nav>
+
+
+      
+
+
+
+
+
+
+
+
+<!-- filtros inicio -->
+
+<section class="author-archive">
+	<div class="container2" id="container2">
+	  <h1> </h1>
+    <h1>Filtra por categorías</h1>
+	  <input type="radio" id="All" name="categories" value="All" checked>
+	  <input type="radio" id="bombacha" name="categories" value="bombacha">
+	  <input type="radio" id="boxer" name="categories" value="boxer">
+	  <input type="radio" id="slip" name="categories" value="slip">
+	  <input type="radio" id="conjunto" name="categories" value="conjunto">
+	  <input type="radio" id="Corpiño" name="categories" value="Corpiño">
+	  <input type="radio" id="top" name="categories" value="top">
+  
+	  <ol class="filters" id=filters2>
+
+      <div id="navegador">
+      <ul>
+
+        <li id="todas">Todas</li>
+        <a href="#"></a>
+          <div id="subseccion0">
+            <p><a href="#" id="todas"> </a><br></p><br>
+            </div>
+
+        <li id="seccion1" onmouseover="ver(1)" onmouseout="ocultar(1)">
+          <a href="#">Categorias</a>
+          <div id="subseccion1">
+            <p><a href="#" id="categorias"> </a><br></p><br>
+            </div>
+        </li>
+     
+
+        <li id="seccion2" onmouseover="ver(2)" onmouseout="ocultar(2)">
+          <a href="#">Talles</a>
+          <div id="subseccion2">
+            <p><a href="#" id="talles"> </a></p><br>
+            </div>
+        </li>
+    
+        <li id="seccion3" onmouseover="ver(3)" onmouseout="ocultar(3)">
+          <a href="#">Marcas</a>
+          <div id="subseccion3">
+            <p><a href="#" id="marcas"> </a><br></p><br>
+            </div>
+        </li>
+
+        <li id="seccion4" onmouseover="ver(4)" onmouseout="ocultar(4)">
+          <a href="#">Colores</a>
+          <div id="subseccion4">
+            <p><a href="#" id="colores"> </a></p><br>
+            </div>
+        </li>
+      </ul>
+    </div>
+    
+	
+  
+
+
+	  </ol>
+    
+ 
+
+	  <ol class="posts" id="cards">
+
+    </ol>
+  </div>
+</section>
+
+
+
+<!-- filtros fin -->
+  
+
+
+    <div class="container">
+      <h4>Carrito de compras</h4>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Item</th>
+            <th scope="col">Talle</th>
+            <th scope="col">Color</th>
+            <th scope="col">Cantidad</th>
+   
+            <th scope="col">Acción</th>
+          
+            
+            <th scope="col">Total</th>
+          </tr>
+        </thead>
+        <tbody id="items"></tbody>
+        <tfoot>
+          <tr id="footer">
+            <th scope="row" colspan="5">Carrito vacío - comience a comprar!</th>
+          </tr>
+        </tfoot>
+      </table>
+    
+
+     
+        
+         
+        
+        
+      
+        
+      </div>
+
+    </div>
+
+    <template id="template-footer">
+     
+        <th scope="row" colspan="2">Total productos</th>
+        <td>10</td>
+        <td>  <button class="btn btn-danger btn-sm" id="vaciar-carrito">
+          vaciar todo
+      </button></td>
+        <td>
+          <button class="btn btn-success btn-sm" id="comprar-carrito">
+            Coordinar entrega
+         </button>
+        </td>
+        <td>
+          
+            
+        </td>
+        <td class="font-weight-bold">$ <span>5000</span></td>
+    </template>
+    
+    <template id="template-carrito">
+      <tr>
+        <th scope="row">id</th>
+        <td>Café</td>
+        <td>talle</td>
+        <td>color</td>
+        <td>1</td>
+  
+    
+        <td>
+          <button class="btn btn-danger btn-sm">
+            -
+        </button>
+            <button class="btn btn-info btn-sm">
+                +
+            </button>
+            
+        </td>
+        
+     
+        <td>$ <span>500</span></td>
+      </tr>
+    </template>
+ 
+
+    <template id="template-card">
+      <li class="post" data-category="" id="id">
+        
+      
+        <div class="card"  id="cards2">
+          <img src="" alt="" class="card-img-top">
+          <div class="card-body">
+        
+            
+            <h5 class="titulo">Titulo</h5>
+            <td>$ <spam class="precio">precio</spam></td><br>
+            <td>talle: <spam class="talle">Talle</spam></td><br>
+            <td>color: <spam class="color">color</spam></td><br>
+
+            
+      
+            <button class="btn btn-dark">Agregar al carrito</button>
+            
+          </div>
+        </div>
+      
+ 
+    </li>
+    </template>
+
+    <template id="template-categorias" >
+      <li class="categoria" id="idFiltro" >
+        <a id="boxer">Boxer</a>
+      </li>
+    </template>
+   
+  
+
+    
+ 
+
+
+
+
+  
+    <script src="index copy.js"></script>
+    <script type="text/javascript">
+      function ver(n) {
+               document.getElementById("subseccion"+n).style.display="block"
+               }
+      function ocultar(n) {
+               document.getElementById("subseccion"+n).style.display="none"
+               }
+      </script>
+
+  
+  </body>
+</html>

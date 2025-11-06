@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda 1 - Mi Perfil</title>
+    <link rel="shortcut icon" href="recursos/imagenes/icono de la app.png" />
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" crossorigin="anonymous" />
+
+    <!-- Bootstrap CSS (si realmente lo necesitas junto con Tailwind) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="estilos.css" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      /* Maps buscar dirección */
+
+      /* Estilos personalizados para la fuente Inter */
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      /* Asegura que el iframe sea responsive */
+      .map-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%; /* 16:9 Aspect Ratio (height / width * 100%) */
+        height: 400px; /* Altura fija para el mapa */
+        overflow: hidden;
+        border-radius: 0.5rem; /* Bordes redondeados */
+      }
+      .map-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 0.5rem; /* Bordes redondeados */
+      }
+      /* Estilos para el mensaje de error/información */
+      .message-box {
+        background-color: #ffebee;
+        color: #d32f2f;
+        border: 1px solid #ef9a9a;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+        text-align: center;
+        display: none; /* Oculto por defecto */
+      }
+
+      /* fin Maps buscar dirección */
+
+      /* Maps estilos*/
+
+      #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .map-container {
+        max-width: 800px;
+        background-color: #ffffff;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1rem;
+      }
+      .input-group label {
+        font-weight: 500;
+        color: #4b5563;
+        margin-bottom: 0.5rem;
+      }
+      .input-group input {
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+        color: #374151;
+      }
+
+      /* Fin Maps estilos*/
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f4f6; /* Light gray background */
+      }
+      /* Custom styles for icons in Navbar */
+      .icon-container .fas,
+      .icon-container .bi {
+        color: white; /* Ensure icons are white */
+      }
+      /* Custom style for the WhatsApp button */
+      .btn-wsp {
+        position: fixed;
+        width: 60px;
+        height: 60px;
+        line-height: 60px;
+        bottom: 40px;
+        right: 40px;
+        background: #25d366;
+        color: #fff;
+        border-radius: 50%;
+        text-align: center;
+        font-size: 30px;
+        box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+      }
+      .btn-wsp:hover {
+        text-decoration: none;
+        color: #fff;
+        background: #20b05b;
+      }
+      /* Badge for shopping cart icon */
+      .insignia {
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform: translate(50%, -50%);
+        background-color: #ef4444; /* Red-500 */
+        color: white;
+        font-size: 0.75rem; /* text-xs */
+        font-weight: bold;
+        border-radius: 9999px; /* rounded-full */
+        padding-left: 0.5rem; /* px-2 */
+        padding-right: 0.5rem; /* px-2 */
+        padding-top: 0.25rem; /* py-1 */
+        padding-bottom: 0.25rem; /* py-1 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        z-index: 10;
+      }
+      /* Input styling */
+      .input {
+        @apply w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+      }
+      .input.is-invalid {
+        @apply border-red-500;
+      }
+      .input.is-valid {
+        @apply border-green-500;
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Boton whatsap Start -->
+    <a href="https://api.whatsapp.com/send?phone=5493446416900" class="btn-wsp" target="_blank">
+      <i class="bi bi-whatsapp"></i>
+    </a>
+    <!-- Boton Whatsapp End -->
+
+    <!-- sticky-top pega la navbar a la parte superior -->
+    <nav class="navbar sticky-top navbar-light bg-blue-800 text-white py-3 px-4 shadow-md">
+      <div class="container-fluid max-w-7xl mx-auto flex justify-between items-center">
+        <!-- Iconos de navegación -->
+        <div class="icon-container flex space-x-6 justify-center w-full">
+          <a class="fas fa-home text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/"> </a>
+
+          <a class="fas fa-user text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/usuario"> </a>
+
+          <a class="fas fa-shopping-cart text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/carrito"> </a>
+          <a class="fas fa-file-alt text-2xl text-white" href="/compras"></a>
+
+          <a class="fas fa-question-circle text-2xl text-white hover:text-blue-300 transition-colors duration-200" href="/preguntas"> </a>
+        </div>
+
+        <!-- Offcanvas (menú desplegable, si se usa) -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+          <div class="offcanvas-header">
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+          </div>
+          <div class="">
+            <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+              <!-- Elementos de menú aquí si se usan -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+      <!-- Sección Mi Perfil / Login -->
+      <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8">
+
+        <!-- Sección de Login (inicialmente oculta, mostrada por JS si no autenticado) -->
+        <section id="login" class="mb-6" style="display: none;">
+          <p id="error" class="text-red-500 mb-4"></p>
+          <article class="space-y-4">
+            <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b">Inicia Sesión o Regístrate</h2>
+            <p class="text-sm text-gray-600">Usa tu número de teléfono para continuar.</p>
+
+            <!-- Contenedor para el login con Google (inicialmente oculto) -->
+            <div id="google-login-container" class="hidden my-4">
+                <button id="googleSignInButton" class="w-full flex items-center justify-center gap-3 py-3 px-4 border rounded-lg shadow-sm text-lg font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="w-6 h-6">
+                    Iniciar Sesión con Google
+                </button>
+            </div>
+
+            <!-- Separador "O" (inicialmente oculto) -->
+            <div id="separator-container" class="hidden relative flex py-3 items-center">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink mx-4 text-gray-500 text-sm">O</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <h3 class="text-lg font-semibold text-gray-700 pt-2">Ingresa tu Teléfono</h3>
+
+            <div>
+              <label for="number" class="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono (sin 0 ni 15):</label>
+              <input type="tel" id="number" placeholder="Ej: 3446123456" class="input" />
+              <button
+                id="numberButton"
+                class="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300"
+              >
+                Enviar Código
+              </button>
+            </div>
+            
+            <!-- Enlace para mostrar métodos alternativos -->
+            <div class="text-center mt-4">
+                <a href="#" id="show-alternative-login" class="text-sm text-blue-600 hover:underline">¿Perdiste tu celular? Inicia sesión con otro método</a>
+            </div>
+
+            <div id="recaptcha-container"></div>
+            <div>
+              <!-- Barra de progreso "Cargando" -->
+              <div
+                id="loading-bar"
+                hidden
+                style="
+                  position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  background-color: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente */
+                  color: white;
+                  padding: 15px 30px;
+                  border-radius: 8px;
+                  font-size: 1.2em;
+                  font-weight: bold;
+                  text-align: center;
+                  min-width: 150px;
+                  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+                  z-index: 10; /* Asegura que esté por encima de la imagen */
+                "
+              >
+                Enviando<span class="loading-dots"></span> <!-- Span para los puntos animados -->
+              </div>
+            </div>
+
+            <style>
+              /* CSS para la animación de los puntos de carga */
+              .loading-dots::after {
+                content: ''; /* Contenido inicial vacío */
+                animation: dots 1s steps(5, end) infinite; /* Aplica la animación 'dots' */
+              }
+
+              @keyframes dots {
+                0%,
+                20% {
+                  content: '.'; /* Un punto */
+                }
+                40% {
+                  content: '..'; /* Dos puntos */
+                }
+                60%,
+                100% {
+                  content: '...'; /* Tres puntos */
+                }
+              }
+            </style>
+
+            <div id="code-section" hidden>
+              <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Código de Verificación:</label>
+              <input type="text" id="code" placeholder="Ingresa el código recibido" class="input" />
+              <button
+                id="validate"
+                class="mt-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300"
+              >
+                Validar Código
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <!-- Sección de Perfil (inicialmente oculta, mostrada por JS si autenticado) -->
+        <section id="profile" class="mb-6" hidden>
+          <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-6 pb-4 border-b">Mi Perfil</h2>
+          <article class="space-y-4">
+            <!-- Título de bienvenida (opcional) -->
+            <div class="flex items-center space-x-4 mb-4">
+                <!-- Foto de Perfil -->
+           <!-- <img
+                id="photo"
+                src="https://placehold.co/100x100/cccccc/333333?text=Foto"
+                alt="Foto de Perfil"
+                class="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
+              /> -->
+          
+               <div class="text-center w-full">
+                <p class="text-gray-800 font-semibold text-lg" id="username">Nombre de Usuario</p>
+                <p class="text-gray-600 text-sm" id="email">email@ejemplo.com</p>
+              </div>
+            </div>
+
+
+            <!-- Datos de Envío y Mapa -->
+            <div class="border-t pt-6 mt-6">
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">Mis Datos de Envío</h3>
+
+              <div class="mb-4">
+                <label for="addressInput" class="block text-gray-700 text-sm font-semibold mb-2"> Ingresa una dirección: </label>
+                <input
+                  type="text"
+                  id="addressInput"
+                  placeholder="Ejemplo: urquiza 545, Gualeguaychu, Entre Rios, Argentina"
+                  class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                />
+              </div>
+
+              <button
+                id="searchButton"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 mb-4"
+              >
+                Buscar en el Mapa
+              </button>
+
+              <!-- Contenedor para mensajes de usuario del mapa -->
+              <div id="messageBox" class="message-box"></div>
+
+              <div class="map-container">
+                <iframe
+                  id="googleMapIframe"
+                  src=""
+                  allowfullscreen=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                ></iframe>
+              </div>
+
+              <p class="text-sm text-gray-500 mt-4 text-center">
+                <strong>Nota:</strong> sé lo más específico posible, calle, número, barrio, localidad
+              </p>
+
+              <form id="formulario1" name="loginForm" class="space-y-4 mt-6">
+              <div id="hiddenPrivateInfo3"></div>
+              <!-- Contenedor para mensajes de usuario del formulario -->
+              <div id="messageBox2" class="message-box"></div>
+
+              <button
+                id="editar"
+                style="display: none;"
+                type="button"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300"
+              >
+                Guardar Cambios
+              </button>
+            </form>
+
+            <!-- Métodos de recuperación y Acciones -->
+            <!--
+            <div class="border-t pt-6 mt-6">
+                <div id="recovery-options" style="display: none;">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Métodos de recuperación</h3>
+                    <p class="text-sm text-gray-600 mb-4">Vincula otro método de inicio de sesión para no perder el acceso a tu cuenta.</p>
+                    El botón para vincular Google se mostrará aquí mediante JS si es necesario -->
+                      <!--
+                    <button id="linkGoogleAccount" style="display: none;" class="w-full flex items-center justify-center gap-3 py-3 px-4 border rounded-lg shadow-sm text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="w-5 h-5">
+                        Vincular cuenta de Google
+                    </button>
+                    <p id="googleLinkedMessage" style="display: none;" class="text-sm text-green-700 bg-green-100 p-3 rounded-md">
+                        ✓ Tu cuenta de Google ya está vinculada.
+                    </p>
+                </div>
+            </div>-->
+
+            <!-- Acciones de la cuenta -->
+            <div class="border-t pt-6 mt-6 space-y-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Acciones de la cuenta</h3>
+                <!--
+                <button id="accesoVendedores" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300"> Acceso para Vendedores </button>
+                -->
+                <button
+                    id="accesoCadeteria"
+                    style="display: none;"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300">
+                    Mi Cadetería
+                </button>
+                <button
+                    id="logout"
+                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md transition-colors duration-300">
+                    Cerrar Sesión
+                </button>
+                <button
+                    id="borrarDatos"
+                    class="w-full text-red-600 hover:text-red-800 text-sm font-medium py-2 px-4 rounded-md transition-colors duration-300">
+                    Borrar datos locales de la aplicación
+                </button>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="usuario.js" type="module"></script>
+    <script src="funciones.js" type="module"></script>
+    <script src="objetos.js" type="module"></script>
+    <!-- Script de Firebase Auth para reCAPTCHA (ya lo tienes arriba, puedes eliminar esta duplicación) -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script> -->
+  </body>
+</html>

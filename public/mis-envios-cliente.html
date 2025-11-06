@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Envíos</title>
+    <!-- Tailwind CSS y Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
+        /* ✅ CAMBIO: Colores actualizados según tu solicitud */
+        .status-solicitado { background-color: #fff7ed; color: #c2410c; border-color: #fed7aa; } /* Naranja */
+        .status-asignado { background-color: #f0fdf4; color: #166534; border-color: #bbf7d0; } /* Verde */
+        .status-en-viaje { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; } /* Azul (para diferenciar de asignado) */
+        .status-pendiente { background-color: #fefce8; color: #854d0e; border-color: #fef08a; } /* Amarillo */
+        .status-cancelado { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; } /* Rojo */
+        .status-terminado { background-color: #f8fafc; color: #475569; border-color: #e2e8f0; } /* Gris/Neutral */
+        .status-sin_cadetes { background-color: #fefce8; color: #854d0e; border-color: #fef08a; } /* Amarillo (igual que pendiente) */
+        /* Estilo para el mapa */
+        .map-container {
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Seguimiento de mis Envíos</h1>
+        
+        <!-- Contenedor para los envíos -->
+        <div id="envios-container" class="space-y-4">
+            <!-- Los envíos se cargarán aquí -->
+            <div id="loading-state" class="text-center py-10">
+                <p class="text-gray-500">Cargando tus envíos...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template para una tarjeta de envío -->
+    <template id="envio-card-template">
+        <div class="bg-white p-5 rounded-lg shadow-md border-l-4">
+            <div class="flex justify-between items-center mb-3">
+                <p class="text-sm text-gray-500">Pedido del <span class="font-medium text-gray-700" data-id="fecha">--/--/----</span></p>
+                <span class="text-xs font-semibold px-2 py-1 rounded-full" data-id="estado-badge"></span>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800 mb-1">De: <span data-id="origen" class="font-normal"></span></h2>
+            <h2 class="text-lg font-semibold text-gray-800">A: <span data-id="destino" class="font-normal"></span></h2>
+            
+            <!-- ✅ NUEVO: Campo para mostrar la propina (oculto por defecto) -->
+            <!-- ✅ CAMBIO: Convertido a flex para alinear el botón -->
+            <div data-id="propina-info" class="hidden text-sm font-medium text-green-700 mt-2 items-center gap-4">
+                <span>Propina: <span data-id="propina-monto"></span></span>
+                <!-- ✅ NUEVO: Botón para mejorar la propina -->
+                <button data-id="improve-tip-btn" class="hidden px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700">
+                    Mejorar propina (10%)
+                </button>
+            </div>
+            
+            <!-- ✅ NUEVO: Detalles del cadete (oculto por defecto) -->
+            <div data-id="cadete-info" class="hidden mt-4 pt-4 border-t border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <img data-id="cadete-foto" src="/recursos/imagenes/cadete_default.png" alt="Foto del cadete" class="w-12 h-12 rounded-full object-cover">
+                    <div>
+                        <p class="font-semibold text-gray-800" data-id="cadete-nombre">--</p>
+                        <p class="text-sm text-gray-500" data-id="cadete-vehiculo">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ✅ NUEVO: Contenedor del mapa (oculto por defecto) -->
+            <div data-id="map-container" class="map-container mt-4 rounded-lg overflow-hidden hidden"></div>
+
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <p class="text-sm text-gray-600" data-id="status-text">Buscando un cadete para tu pedido...</p>
+                <!-- ✅ NUEVO: Botón de cancelar (oculto por defecto) -->
+                <button data-id="cancel-btn" class="hidden mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Cancelar Pedido</button>
+            </div>
+        </div>
+    </template>
+
+    <script type="module">
+        import { iniciarFirebase } from './funciones.js';
+        iniciarFirebase();
+
+        // Mapa para almacenar instancias de mapas y listeners para evitar duplicados
+        const activeMaps = new Map();
+
+        /**
+         * Carga dinámicamente el script de Google Maps.
+         */
+        async function loadGoogleMaps() {
+            if (window.google && window.google.maps) return Promise.resolve();
+            try {
+                const db = firebase.firestore();
+                const configDoc = await db.collection('datosGenerales').doc('datos').get();
+                if (!configDoc.exists || !configDoc.data().googleMapsApiKey) {
+                    throw new Error("La clave de API de Google Maps no está configurada.");
+                }
+                const apiKey = configDoc.data().googleMapsApiKey;
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+                return new Promise((resolve, reject) => {
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error('No se pudo cargar el script de Google Maps.'));
+                });
+            } catch (error) {
+                console.error("Error al cargar Google Maps:", error);
+                alert(error.message);
+                return Promise.reject(error);
+            }
+        }
+
+        const db = firebase.firestore();
+        const enviosContainer = document.getElementById('envios-container');
+        const loadingState = document.getElementById('loading-state');
+        const template = document.getElementById('envio-card-template').content;
+
+        // La lógica principal se ejecuta después de cargar Google Maps
+        loadGoogleMaps().then(() => {
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    listenToUserEnvioss(user.uid);
+                } else {
+                    window.location.href = `/usuario?volver=temp-envios-cliente`;
+                }
+            });
+        }).catch(error => {
+            loadingState.style.display = 'none';
+            enviosContainer.innerHTML = `<p class="text-center text-red-500 py-10">No se pudo cargar el mapa. ${error.message}</p>`;
+        });
+
+        /**
+         * ✅ NUEVO: Inicia o reinicia los listeners de ubicación para todos los envíos activos en el mapa.
+         * Se llama cuando la página se vuelve visible.
+         */
+        function startAllListeners() {
+            console.log("Página visible. Iniciando listeners de ubicación...");
+            for (const [envioId, mapData] of activeMaps.entries()) {
+                // Solo inicia si no hay un listener activo ya
+                if (!mapData.listener) {
+                    mapData.listener = db.collection('usuarios').doc(mapData.cadeteId).onSnapshot(cadeteSnapshot => {
+                        const cadeteLocation = cadeteSnapshot.data()?.l;
+                        if (cadeteLocation && cadeteLocation.latitude) {
+                            const newPosition = { lat: cadeteLocation.latitude, lng: cadeteLocation.longitude };
+                            mapData.marker.setPosition(newPosition);
+                            mapData.map.panTo(newPosition);
+                        }
+                    });
+                    console.log(`Listener para envío ${envioId} REINICIADO.`);
+                }
+            }
+        }
+
+        function listenToUserEnvioss(userId) {
+            // Escuchamos los envíos del usuario de las últimas 24 horas, ordenados por fecha
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+            db.collection('envios')
+              .where('usuarioId', '==', userId)
+              .where('fecha', '>=', twentyFourHoursAgo)
+              .orderBy('fecha', 'desc')
+              .onSnapshot(snapshot => {
+                    loadingState.style.display = 'none';
+                    enviosContainer.innerHTML = ''; // Limpiar antes de renderizar
+
+                    if (snapshot.empty) {
+                        enviosContainer.innerHTML = '<p class="text-center text-gray-500 py-10">No tienes envíos en curso o recientes.</p>';
+                        return;
+                    }
+
+                    snapshot.forEach(doc => {
+                        const envio = doc.data();
+                        const card = template.cloneNode(true).firstElementChild;
+                        card.id = `envio-${doc.id}`; // Asignar ID único a la tarjeta
+
+                        // Mapeo de estados a texto y clases
+                        const statusInfo = {
+                            'solicitado': { text: 'Buscando el cadete más cercano para tu pedido...', class: 'status-solicitado' }, /* Naranja */
+                            'asignado': { text: '¡Cadete asignado! Pronto estará en camino.', class: 'status-asignado' }, /* Verde */
+                            'en viaje': { text: '¡Tu pedido está en camino!', class: 'status-en-viaje' },
+                            'terminado': { text: 'Tu pedido fue entregado. ¡Gracias por tu compra!', class: 'status-terminado' },
+                            'sin_cadetes': { text: 'No encontramos cadetes disponibles todavía, mejora tu propina y consigue cadetes más rápido.', class: 'status-sin_cadetes' }, /* Amarillo */
+                            'pendiente': { text: 'No encontramos cadetes disponibles todavía, mejora tu propina y consigue cadetes más rápido.', class: 'status-pendiente' }, /* Amarillo */
+                            'cancelado': { text: 'Este pedido fue cancelado.', class: 'status-cancelado' } /* Rojo */
+                        };
+
+                        const currentStatus = statusInfo[envio.estado] || statusInfo['solicitado'];
+
+                        // Rellenar datos de la tarjeta
+                        card.querySelector('[data-id="fecha"]').textContent = envio.fecha.toDate().toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        card.querySelector('[data-id="origen"]').textContent = envio.origen.direccion;
+                        card.querySelector('[data-id="destino"]').textContent = envio.destino.direccion || 'Sin especificar';
+                        
+                        const estadoBadge = card.querySelector('[data-id="estado-badge"]');
+                        estadoBadge.textContent = envio.estado.replace('_', ' ');
+                        estadoBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${currentStatus.class}`;
+                        
+                        card.querySelector('[data-id="status-text"]').textContent = currentStatus.text;
+                        card.classList.add(currentStatus.class);
+                        enviosContainer.appendChild(card);
+
+                        // ✅ LÓGICA MEJORADA PARA LA PROPINA
+                        const propinaInfo = card.querySelector('[data-id="propina-info"]');
+                        const propinaMonto = card.querySelector('[data-id="propina-monto"]');
+                        const improveTipBtn = card.querySelector('[data-id="improve-tip-btn"]');
+                        const ongoingStates = ['solicitado', 'pendiente', 'asignado', 'en viaje'];
+
+                        if (ongoingStates.includes(envio.estado)) {
+                            propinaInfo.classList.remove('hidden');
+                            propinaInfo.style.display = 'flex';
+                            improveTipBtn.classList.remove('hidden');
+
+                            if (envio.propina && envio.propina > 0) {
+                                // Caso 1: Ya hay propina. Ofrecer aumentarla un 10%.
+                                propinaMonto.textContent = `$${Math.round(envio.propina)}`;
+                                improveTipBtn.textContent = 'Mejorar propina (10%)';
+                                improveTipBtn.onclick = () => {
+                                    if (confirm('Esto aumentará la propina actual en un 10%. ¿Deseas continuar?')) {
+                                        const nuevaPropina = envio.propina * 1.10;
+                                        db.collection('envios').doc(doc.id).update({ propina: nuevaPropina })
+                                            .catch(error => console.error("Error al actualizar la propina:", error));
+                                    }
+                                };
+                            } else {
+                                // Caso 2: No hay propina. Ofrecer una propina inicial.
+                                const propinaSugerida = Math.round((envio.tarifaMinima || 0) / 3);
+                                propinaMonto.textContent = '$0'; // Mostrar que la propina actual es cero.
+                                improveTipBtn.textContent = `Mejorar propina ($${propinaSugerida})`;
+                                improveTipBtn.onclick = () => {
+                                    if (confirm(`Esto establecerá una propina de $${propinaSugerida}. ¿Deseas continuar?`)) {
+                                        db.collection('envios').doc(doc.id).update({ propina: propinaSugerida })
+                                            .catch(error => console.error("Error al establecer la propina:", error));
+                                    }
+                                };
+                            }
+                        } else if (envio.propina && envio.propina > 0) {
+                            // Para estados finales (terminado, cancelado), solo mostrar la propina si existe, sin el botón.
+                            propinaInfo.classList.remove('hidden');
+                            propinaInfo.style.display = 'flex';
+                            propinaMonto.textContent = `$${Math.round(envio.propina)}`;
+                            improveTipBtn.classList.add('hidden'); // Ocultar el botón
+                        }
+
+
+                        // ✅ LÓGICA PARA MOSTRAR CADETE Y MAPA
+                        if (envio.cadeteId && (envio.estado === 'asignado' || envio.estado === 'en viaje')) {
+                            handleAssignedEnvio(doc.id, envio, card);
+                        }
+
+                        // ✅ MEJORA: Detener el listener del mapa si el envío termina o se cancela.
+                        if (envio.estado === 'terminado' || envio.estado === 'cancelado') {
+                            if (activeMaps.has(doc.id)) {
+                                const { listener } = activeMaps.get(doc.id);
+                                if (listener) listener(); // Detiene la escucha en Firestore.
+                                activeMaps.delete(doc.id); // Limpia la referencia del mapa.
+                                console.log(`Listener para el envío ${doc.id} detenido.`);
+                            }
+                        }
+
+                        // ✅ LÓGICA PARA CANCELAR
+                        const cancelButton = card.querySelector('[data-id="cancel-btn"]');
+                        // ✅ CAMBIO: Permitir cancelar si el estado es 'solicitado' o 'pendiente'.
+                        if (envio.estado === 'solicitado' || envio.estado === 'pendiente') {
+                            cancelButton.classList.remove('hidden');
+                            cancelButton.onclick = () => {
+                                if (confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+                                    // ✅ MEJORA: Llamar a la Cloud Function para una cancelación segura.
+                                    // ✅ CORRECCIÓN: Especificar la región correcta de la función.
+                                    const functions = firebase.app().functions('southamerica-east1');
+                                    const cancelarEnvio = functions.httpsCallable('cancelarEnvioCliente');                                    cancelarEnvio({ envioId: doc.id })
+                                        .then(result => {
+                                            console.log('Pedido cancelado exitosamente.', result);
+                                            // El listener de onSnapshot se encargará de actualizar la UI.
+                                        })
+                                        .catch(error => {
+                                            console.error('Error al cancelar el pedido:', error);
+                                            alert(`No se pudo cancelar el pedido: ${error.message}`);
+                                        });
+                                }
+                            };
+                        } else {
+                            // Asegurarse de que el botón esté oculto para otros estados.
+                            cancelButton.classList.add('hidden');
+                            cancelButton.onclick = null; // Limpiar el handler
+                        }
+                    });
+              }, error => {
+                  console.error("Error al escuchar los envíos:", error);
+                  loadingState.style.display = 'none';
+                  enviosContainer.innerHTML = '<p class="text-center text-red-500 py-10">Error al cargar tus envíos.</p>';
+              });
+        }
+
+        async function handleAssignedEnvio(envioId, envioData, cardElement) {
+            const cadeteInfoDiv = cardElement.querySelector('[data-id="cadete-info"]');
+            const mapContainer = cardElement.querySelector('[data-id="map-container"]');
+            
+            // Mostrar contenedores
+            cadeteInfoDiv.classList.remove('hidden');
+            mapContainer.classList.remove('hidden');
+
+            // 1. Obtener datos del cadete
+            const cadeteDoc = await db.collection('usuarios').doc(envioData.cadeteId).get();
+            if (cadeteDoc.exists) {
+                const cadeteData = cadeteDoc.data();
+                cardElement.querySelector('[data-id="cadete-nombre"]').textContent = cadeteData.nombre || 'Cadete Asignado';
+                cardElement.querySelector('[data-id="cadete-vehiculo"]').textContent = `Vehículo: ${cadeteData.vehiculo || 'No especificado'}`;
+                if (cadeteData.fotoURL) {
+                    cardElement.querySelector('[data-id="cadete-foto"]').src = cadeteData.fotoURL;
+                }
+            }
+
+            // 2. Inicializar mapa si no existe para este envío
+            if (!activeMaps.has(envioId)) {
+                const map = new google.maps.Map(mapContainer, {
+                    zoom: 15,
+                    center: { lat: envioData.origen.coordenadas.lat, lng: envioData.origen.coordenadas.lon },
+                    disableDefaultUI: true,
+                });
+
+                // Marcadores de origen y destino
+                new google.maps.Marker({ position: { lat: envioData.origen.coordenadas.lat, lng: envioData.origen.coordenadas.lon }, map, title: 'Origen' });
+                if (envioData.destino.coordenadas) {
+                    new google.maps.Marker({ position: { lat: envioData.destino.coordenadas.lat, lng: envioData.destino.coordenadas.lon }, map, title: 'Destino', icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' });
+                }
+
+                // Marcador del cadete (se crea una sola vez)
+                const cadeteMarker = new google.maps.Marker({
+                    map,
+                    // ✅ MEJORA: Usar un ícono de motocicleta en lugar de un círculo.
+                    icon: {
+                        url: 'https://maps.google.com/mapfiles/kml/shapes/motorcycling.png',
+                        scaledSize: new google.maps.Size(35, 35), // Tamaño del ícono
+                        anchor: new google.maps.Point(17, 17) // Centra el ícono
+                    },
+                    title: 'Cadete'
+                });
+
+                // ✅ CAMBIO: Guardamos las referencias, pero el listener se inicia por separado.
+                // Guardamos el ID del cadete para poder reiniciar el listener más tarde.
+                activeMaps.set(envioId, { map, marker: cadeteMarker, listener: null, cadeteId: envioData.cadeteId });
+
+                // ✅ CAMBIO: Iniciar el listener solo si la página está visible.
+                if (!document.hidden) {
+                    startAllListeners();
+                }
+            }
+        }
+
+        /**
+         * ✅ NUEVO: Detiene todos los listeners de ubicación activos.
+         * Se llama cuando la página se oculta.
+         */
+        function stopAllListeners() {
+            console.log("Página oculta. Deteniendo listeners de ubicación...");
+            for (const [envioId, mapData] of activeMaps.entries()) {
+                if (mapData.listener) {
+                    mapData.listener(); // Llama a la función de cancelación de onSnapshot
+                    mapData.listener = null; // Marca el listener como inactivo
+                    console.log(`Listener para envío ${envioId} DETENIDO.`);
+                }
+            }
+        }
+
+        // ✅ NUEVO: Añadimos el listener para el cambio de visibilidad de la página.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAllListeners();
+            } else {
+                startAllListeners();
+            }
+        });
+    </script>
+</body>
+</html>

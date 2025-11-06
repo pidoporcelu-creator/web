@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Pago Exitoso!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center p-6">
+    <div id="message-container" class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-green-500 mb-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">¡Pago Realizado con Éxito!</h1>
+        <p class="text-gray-600 mb-6">Tu compra se ha procesado correctamente. ¡Gracias por tu pedido!</p>
+        <a href="https://www.pidoporcelu.com/catalogo?comercio=YBuVH33YSNMYIlOgWpVRPEwXP2r2" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+            Volver a la Tienda
+        </a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Página de pago exitoso cargada.");
+
+            // 1. Recuperar los parámetros de la URL de Mercado Pago
+            const params = new URLSearchParams(window.location.search);
+            const paymentStatus = params.get('status');
+            const externalReference = params.get('external_reference'); // Este es nuestro pedidoId
+
+            // 2. ✅ CORRECCIÓN: Recuperar el commerceKey que guardamos desde procesandoPago.html
+            const commerceKey = sessionStorage.getItem('lastCommerceKey');
+
+            // 3. Si el pago fue aprobado y tenemos las referencias, limpiamos el carrito
+            if (paymentStatus === 'approved' && externalReference && commerceKey) {
+                console.log(`Pago aprobado para el pedido: ${externalReference}. Limpiando carrito para el comercio: ${commerceKey}`);
+                
+                localStorage.removeItem(commerceKey); // ¡ACCIÓN CLAVE!
+                sessionStorage.removeItem('lastCommerceKey'); // Limpiamos la clave temporal
+
+                // (Opcional) Actualizar el mensaje para el usuario
+                const messageContainer = document.getElementById('message-container');
+                const successMessage = messageContainer.querySelector('p');
+                if (successMessage) {
+                    successMessage.innerHTML = `Tu compra con ID <strong>${externalReference}</strong> se ha procesado correctamente. ¡Gracias por tu pedido!`;
+                }
+            } else {
+                console.warn("El estado del pago no es 'approved' o faltan parámetros (external_reference, commerceKey). No se limpiará el carrito.");
+            }
+        });
+    </script>
+</body>
+</html>

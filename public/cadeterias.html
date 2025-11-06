@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedir Cadetería</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!-- Google Maps JavaScript API -->
+    <!-- ✅ CORRECCIÓN: Eliminamos la carga del script de Google Maps de aquí. Se cargará dinámicamente desde el script principal. -->
+    <!-- ✅ CORRECCIÓN: Se elimina la carga del script de Google Maps de aquí. Se cargará dinámicamente desde el script principal. -->
+
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Contenedor del formulario */
+        .form-container {
+            background-color: #ffffff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #1c1e21;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        /* Grupo de campos del formulario */
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #606770;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #ccd0d5;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #1877f2;
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+
+        /* Selección de vehículo */
+        .vehicle-selection {
+            display: flex;
+            justify-content: space-around;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .vehicle-option input[type="radio"] {
+            display: none; /* Ocultamos el radio button real */
+        }
+
+        .vehicle-option img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .vehicle-option img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Estilo para cuando el vehículo está seleccionado */
+        .vehicle-option input[type="radio"]:checked + img {
+            border-color: #1877f2;
+            transform: scale(1.05);
+        }
+
+        /* Botón de envío */
+        .submit-btn {
+            width: 100%;
+            padding: 0.9rem;
+            background-color: #1877f2;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .submit-btn:hover {
+            background-color: #166fe5;
+        }
+    </style>
+    <!-- Estilos adicionales para la selección de cadetería -->
+    <style>
+        .cadeteria-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        /* ✅ NUEVO: Alinear al centro el contenido de las opciones de cadetería */
+        .cadeteria-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .cadeteria-option p {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #606770;
+            margin-top: 0.25rem;
+        }
+        .details-toggle {
+            color: #1c1e21; /* Cambiado a negro/gris oscuro */
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: -0.75rem;
+            margin-bottom: 1.25rem;
+            display: inline-flex; /* Para alinear el texto y la flecha */
+            align-items: center;
+            gap: 0.25rem; /* Espacio entre texto y flecha */
+        }
+        #toggle-arrow {
+            display: inline-block;
+            transition: transform 0.2s ease-in-out;
+        }
+        .view-shipments-btn {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            padding: 0.6rem 1.2rem;
+            background-color: #4A5568; /* Gris oscuro */
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .view-shipments-btn:hover {
+            background-color: #2D3748; /* Gris más oscuro */
+        }
+    </style>
+    <style>
+        /* Estilos para el mapa */
+        .map-container {
+            position: relative;
+            height: 350px; /* Altura fija para el mapa interactivo */
+            width: 100%;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        /* Estilos para el mensaje de éxito */
+        #success-message {
+            text-align: center;
+        }
+        #success-message h2 {
+            color: #1c1e21;
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+        }
+        #success-message p {
+            color: #606770;
+            margin-bottom: 1.5rem;
+        }
+        #success-message img {
+            max-width: 150px;
+            margin-bottom: 1.5rem;
+        }
+        #new-order-btn {
+            background-color: #4CAF50; /* Verde */
+        }
+        /* ✅ NUEVO: Estilos para el mensaje de restricción */
+        #restriction-message {
+            background-color: #fffbe6; /* Amarillo claro */
+            color: #92400e; /* Ámbar oscuro */
+            border: 1px solid #fde68a;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .ver-tarifas-link {
+            border: 1px solid #fde68a;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        /* ✅ NUEVO: Estilos para el tooltip de la propina */
+        .label-with-tooltip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem; /* Espacio entre la etiqueta y el icono */
+            position: relative; /* Necesario para posicionar el tooltip */
+        }
+        .info-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: #606770;
+            color: white;
+            text-align: center;
+            line-height: 18px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none; /* Evita que el texto '?' se seleccione */
+        }
+        .tooltip {
+            visibility: hidden; /* Oculto por defecto y accesible */
+            opacity: 0;
+            position: absolute;
+            top: 100%; /* Se posiciona debajo del contenedor */
+            left: 0;
+            background-color: #333;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            z-index: 10;
+            width: 250px; /* Ancho del tooltip */
+            margin-top: 5px;
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+        /* Muestra el tooltip al pasar el mouse o al hacer foco en el icono */
+        .info-icon:hover + .tooltip,
+        .info-icon:focus + .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* ✅ NUEVO: Estilos para el botón flotante de WhatsApp */
+        .whatsapp-fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #25D366; /* Color de WhatsApp */
+            color: white;
+            border-radius: 50%;
+            display: none; /* Oculto por defecto, se muestra con JS */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: transform 0.2s ease-in-out;
+            text-decoration: none;
+        }
+        .whatsapp-fab:hover {
+            transform: scale(1.1);
+        }
+        .whatsapp-fab svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <!-- ✅ NUEVO: Botón flotante de WhatsApp (se moverá al body con JS) -->
+        <a id="whatsapp-btn" class="whatsapp-fab" href="#" target="_blank" title="Chatea con nosotros">
+            <svg viewBox="0 0 90 90"><path d="M90,43.841c0,24.213-19.779,43.841-44.182,43.841c-7.747,0-15.025-1.98-21.357-5.455L0,90l7.975-23.522   c-4.023-6.606-6.34-14.354-6.34-22.637C1.635,19.628,21.416,0,45.818,0C70.223,0,90,19.628,90,43.841z M45.818,6.982   c-20.484,0-37.146,16.535-37.146,36.859c0,8.065,2.629,15.534,7.076,21.61L11.107,79.14l14.275-4.537   c5.865,3.851,12.891,6.097,20.437,6.097c20.481,0,37.146-16.533,37.146-36.857S66.301,6.982,45.818,6.982z M68.129,53.938   c-0.273-0.447-0.994-0.717-2.076-1.254c-1.084-0.537-6.41-3.138-7.4-3.495c-0.993-0.358-1.717-0.538-2.438,0.537   c-0.721,1.076-2.797,3.495-3.43,4.212c-0.632,0.719-1.263,0.809-2.344,0.273c-1.082-0.537-4.571-1.673-8.708-5.333   c-3.219-2.848-5.393-6.364-6.025-7.441c-0.631-1.075-0.066-1.656,0.475-2.191c0.488-0.482,1.084-1.255,1.625-1.882   c0.543-0.628,0.723-1.075,1.082-1.793c0.363-0.717,0.182-1.344-0.09-1.883c-0.27-0.537-2.438-5.825-3.34-8.052   c-0.9-2.22-1.807-1.916-2.438-1.916c-0.631,0-1.354-0.09-2.076-0.09c-0.722,0-1.896,0.269-2.889,1.344   c-0.992,1.076-3.789,3.676-3.789,8.963c0,5.288,3.879,10.397,4.422,11.113c0.541,0.716,7.559,11.52,18.287,16.037   c9.402,3.96,10.495,3.556,12.379,3.349c1.881-0.206,5.895-2.392,6.716-4.727c0.82-2.335,0.82-4.34,0.549-4.727   C69.123,54.656,68.402,54.385,68.129,53.938z"/></svg>
+        </a>
+        <h1>Pedir Cadetería</h1>
+        <a href="mis-envios-cliente.html" class="view-shipments-btn">Ver mis pedidos</a>
+
+        <div id="restriction-message" style="display: none;"></div>
+
+        <form id="cadeteria-form">
+            
+            <!-- ✅ CAMBIO: El mapa y el origen ahora están al principio -->
+            <div class="form-group">
+                <label for="origen">Dirección de Origen</label>
+                <input type="text" id="origen" name="direccion_origen" class="input-field" placeholder="Ingresa tu dirección para ver cadeterías" required>
+            </div>
+            <div class="form-group">
+                <label>Ajusta la ubicación en el mapa</label>
+                <div id="map" class="map-container" style="margin-top: 0.5rem;"></div>
+            </div>
+
+            <!-- ✅ NUEVO: Contenedor para el mensaje de "no hay cadeterías", se mostrará debajo del mapa -->
+            <div id="no-cadeterias-message" style="display: none; text-align: center; color: #606770; margin: 1rem 0; font-weight: 500;"></div>
+
+            <!-- ✅ NUEVO: Contenedor para el resto del formulario, oculto por defecto -->
+            <div id="main-form-content" style="display: none;">
+                <!-- ✅ NUEVO: Contenedor para mostrar la cadetería específica cuando se accede por URL -->
+                <div id="specific-cadeteria-display" class="cadeteria-option" style="display: none; margin-bottom: 1.5rem; justify-content: center;">
+                    <img id="specific-cadeteria-logo" src="" alt="Logo de la cadetería" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #1877f2;">
+                    <p id="specific-cadeteria-name" style="font-size: 1.1rem; font-weight: bold; margin-top: 0.5rem;"></p>
+                </div>
+
+                <!-- La selección de cadetería ahora está después del mapa -->
+                <div class="form-group">
+                    <label>Elige una cadetería</label>
+                    <div id="cadeteria-list" class="cadeteria-selection">
+                        <p style="grid-column: 1 / -1; text-align: center; color: #606770;">Ingresa una dirección de origen para ver las opciones.</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Elige un vehículo</label>
+                    <div class="vehicle-selection">
+                        <label class="vehicle-option">
+                            <input type="radio" name="vehiculo" value="moto" required checked>
+                            <img src="recursos/imagenes/moto.jfif" alt="Moto">
+                        </label>
+                        <label class="vehicle-option">
+                            <input type="radio" name="vehiculo" value="bici">
+                            <img src="recursos/imagenes/bici.jfif" alt="Bicicleta">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Campo para la propina con tooltip -->
+                <div class="form-group">
+                    <div class="label-with-tooltip">
+                        <label for="propina">Propina (Opcional)</label>
+                        <span class="info-icon" tabindex="0">?</span>
+                        <div class="tooltip">
+                            Mientras mejor sea tu propina, tu cadete se asignará más rápido.
+                        </div>
+                    </div>
+                    <input type="number" id="propina" name="propina" class="input-field" placeholder="Ej: 500" min="0">
+                </div>
+
+                <!-- Contenedor de detalles opcionales (oculto por defecto) -->
+                <div id="optional-details" style="display: none;">
+                    <div class="form-group">
+                        <label for="referencia_origen">Referencia Origen (Opcional)</label>
+                        <input type="text" id="referencia_origen" name="referencia_origen" class="input-field" placeholder="Ej: Portón negro, tocar timbre">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="destino">Dirección de Destino (Opcional)</label>
+                        <input type="text" id="destino" name="direccion_destino" class="input-field" placeholder="Ej: Calle Falsa 123">
+                    </div>
+                    <div class="form-group">
+                        <label for="referencia_destino">Referencia Destino (Opcional)</label>
+                        <input type="text" id="referencia_destino" name="referencia_destino" class="input-field" placeholder="Ej: Dejar en recepción con Juan">
+                    </div>
+
+                    <div id="route-info" style="display: none; margin-top: 1rem; text-align: left; padding: 0.75rem; background-color: #f0f2f5; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.9rem;"><strong>Distancia:</strong> <span id="route-distance"></span></p>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem;"><strong>Duración:</strong> <span id="route-duration"></span></p>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 1rem; font-weight: bold;"><strong>Costo estimado:</strong> <span id="route-cost"></span></p>                    
+                        <a id="ver-tarifas-btn" href="#" target="_blank" class="ver-tarifas-link" style="margin-top: 0.75rem; font-size: 0.85rem; display: inline-block;">Ver detalle de tarifas</a>
+                    </div>
+                    
+                    <button type="button" id="estimate-cost-btn" class="submit-btn" style="margin-top: 1rem; background-color: #4A5568; font-size: 1rem;">Estimar costo</button>
+                </div>
+                <!-- Botón para mostrar/ocultar todos los detalles -->
+                <div class="form-group" style="margin-bottom: 1.25rem; text-align: right;">
+                    <a id="toggle-details" class="details-toggle">
+                        Agregar detalles (opcional) <span id="toggle-arrow">▼</span>
+                    </a>
+                </div>
+
+                <div class="form-group" id="celular-form-group">
+                    <label for="celular">Número de Celular</label>
+                    <input type="tel" id="celular" name="celular" class="input-field" placeholder="Ej: 1122334455" required>
+                </div>
+
+                <button type="submit" id="submit-btn" class="submit-btn">Enviar</button>
+            </div>
+        </form>
+
+        <!-- Mensaje de éxito (oculto por defecto) -->
+        <div id="success-message" style="display: none;">
+            <h2>¡Pedido en camino!</h2>
+            <p>En minutos le llegará su cadete.</p>
+            <p id="success-address" style="font-weight: bold; color: #1c1e21; margin-top: 0.5rem;"></p>
+            <button id="new-order-btn" class="submit-btn">Hacer otro pedido</button>
+        </div>
+
+    </div>
+
+    <script src="/cadeterias.js" type="module"></script>
+</body>
+</html>
